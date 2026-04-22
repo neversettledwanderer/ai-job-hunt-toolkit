@@ -1,0 +1,10 @@
+{
+  "name": "Job Hunt Pipeline",
+  "description": "Complete job search management with scheduled automations: daily status notifications, job posting enrichment, posting maintenance, and weekly summaries.",
+  "version": "1.0.0",
+  "requires": {
+    "services": ["supabase", "slack", "gmail"],
+    "tools": ["Deno", "1Password CLI (op)", "Playwright"]
+  },
+  "tags": ["job-hunt", "career", "pipeline", "automation", "notifications"]
+}

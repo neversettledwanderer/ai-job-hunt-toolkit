@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.jobhunt.enrich-jobs</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/path/to/ai-job-hunt-toolkit/extension/scripts/launchd-wrapper.sh</string>
+    <string>/path/to/ai-job-hunt-toolkit/extension/scripts/enrich-job-postings.ts</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>10</integer>
+    <key>Minute</key>
+    <integer>7</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/enrich-jobs.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/enrich-jobs.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/yourusername</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>
