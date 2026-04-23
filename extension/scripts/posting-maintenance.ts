@@ -25,8 +25,8 @@ const LIMIT = limitIdx !== -1 ? parseInt(Deno.args[limitIdx + 1], 10) : DEFAULT_
 
 async function pw(...parts: string[]): Promise<string> {
   const args = ["-s=" + SESSION, ...parts];
-  const proc = new Deno.Command("playwright-cli", {
-    args: args,
+  const proc = new Deno.Command("npx", {
+    args: ["@playwright/cli", ...args],
     stdout: "piped",
     stderr: "piped",
   });

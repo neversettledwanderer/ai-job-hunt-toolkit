@@ -17,4 +17,5 @@ export SLACK_CHANNEL=$(python3 -c "import json; print(json.load(open('$CREDS_FIL
 export GMAIL_EMAIL=$(python3 -c "import json; print(json.load(open('$CREDS_FILE'))['gmail_email'])")
 export GMAIL_APP_PASSWORD=$(python3 -c "import json; print(json.load(open('$CREDS_FILE'))['gmail_app_password'])")
 
-exec /opt/homebrew/bin/deno run --allow-all "$@"
+DENO_PATH=$(which deno 2>/dev/null || echo "/opt/homebrew/bin/deno")
+exec "$DENO_PATH" run --allow-all "$@"
