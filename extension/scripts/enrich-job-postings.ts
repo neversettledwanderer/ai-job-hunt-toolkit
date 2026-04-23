@@ -6,7 +6,7 @@
 import { chromium } from "npm:playwright";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendSlackMessage, getCaptureChannel } from "../lib/slack.ts";
-import { readCredential } from "../lib/credentials.ts";
+import { readCredential, readCredentialOptional } from "../lib/credentials.ts";
 
 // --- Config ---
 const CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -16,8 +16,8 @@ const DELAY_MAX_MS = 15000;
 
 // --- Supabase setup (credentials from 1Password) ---
 async function getSupabaseClient() {
-  const url = await readCredential("Your Supabase", "project_url");
-  const key = await readCredential("Your Supabase", "service_role_key");
+  const url = await readCredential("supabase_url");
+  const key = await readCredential("supabase_key");
   return createClient(url, key);
 }
 

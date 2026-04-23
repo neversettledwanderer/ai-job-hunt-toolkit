@@ -61,8 +61,8 @@ async function main() {
   const modeLabel = MODE === "check-active" ? "check active postings" : "backfill posted dates";
   console.log(`[${new Date().toISOString()}] Posting maintenance: ${modeLabel}${dryRun ? " (DRY RUN)" : ""}...`);
 
-  const url = await readCredential("Your Supabase", "project_url");
-  const key = await readCredential("Your Supabase", "service_role_key");
+  const url = await readCredential("supabase_url");
+  const key = await readCredential("supabase_key");
   const supabase = createClient(url, key);
 
   let query = supabase
