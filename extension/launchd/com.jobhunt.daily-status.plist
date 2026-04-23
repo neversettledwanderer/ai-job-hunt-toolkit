@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.jobhunt.daily-status-kickoff</string>
+  <string>com.jobhunt.daily-status</string>
   <key>ProgramArguments</key>
   <array>
     <!-- UPDATE THESE PATHS to match your installation -->
     <string>/path/to/ai-job-hunt-toolkit/extension/scripts/launchd-wrapper.sh</string>
     <string>/path/to/ai-job-hunt-toolkit/extension/scripts/daily-status.ts</string>
     <string>--mode</string>
-    <string>kickoff</string>
+    <string>daily</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>

@@ -25,8 +25,8 @@ const LIMIT = limitIdx !== -1 ? parseInt(Deno.args[limitIdx + 1], 10) : DEFAULT_
 
 async function pw(...parts: string[]): Promise<string> {
   const args = ["-s=" + SESSION, ...parts];
-  const proc = new Deno.Command("playwright-cli", {
-    args: args,
+  const proc = new Deno.Command("npx", {
+    args: ["@playwright/cli", ...args],
     stdout: "piped",
     stderr: "piped",
   });
@@ -61,8 +61,8 @@ async function main() {
   const modeLabel = MODE === "check-active" ? "check active postings" : "backfill posted dates";
   console.log(`[${new Date().toISOString()}] Posting maintenance: ${modeLabel}${dryRun ? " (DRY RUN)" : ""}...`);
 
-  const url = await readCredential("Your Supabase", "project_url");
-  const key = await readCredential("Your Supabase", "service_role_key");
+  const url = await readCredential("supabase_url");
+  const key = await readCredential("supabase_key");
   const supabase = createClient(url, key);
 
   let query = supabase

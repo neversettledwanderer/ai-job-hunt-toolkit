@@ -8,13 +8,13 @@ let _token: string | null = null;
 let _channel: string | null = null;
 
 async function getToken(): Promise<string> {
-  if (!_token) _token = await readCredential("Your Slack", "credential");
+  if (!_token) _token = await readCredential("slack_token");
   if (!_token) throw new Error("Failed to read Slack bot token from 1Password");
   return _token;
 }
 
 export async function getCaptureChannel(): Promise<string> {
-  if (!_channel) _channel = await readCredential("Your Slack", "channel");
+  if (!_channel) _channel = await readCredential("slack_channel");
   if (!_channel) throw new Error("Failed to read Slack channel from 1Password");
   return _channel;
 }

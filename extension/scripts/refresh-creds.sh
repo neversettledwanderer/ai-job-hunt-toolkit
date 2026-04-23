@@ -13,13 +13,19 @@ fi
 
 CREDS_FILE="$HOME/.config/job-hunt/creds.json"
 
-# Update these 1Password item names and vault to match your setup
-SUPABASE_URL=$(op item get "Your Supabase" --vault "Your Vault" --fields label=project_url --reveal)
-SUPABASE_KEY=$(op item get "Your Supabase" --vault "Your Vault" --fields label=service_role_key --reveal)
-SLACK_TOKEN=$(op item get "Your Slack" --vault "Your Vault" --fields label=credential --reveal)
-SLACK_CHANNEL=$(op item get "Your Slack" --vault "Your Vault" --fields label=channel --reveal)
-GMAIL_EMAIL=$(op item get "Your Gmail SMTP" --vault "Your Vault" --fields label=email --reveal)
-GMAIL_APP_PASSWORD=$(op item get "Your Gmail SMTP" --vault "Your Vault" --fields label=app_password --reveal)
+# 1Password item names and vault are configurable via environment variables.
+# Set these in your shell profile or pass them when running this script.
+VAULT="${OP_VAULT_NAME:-Personal}"
+SUPABASE_ITEM="${OP_SUPABASE_ITEM:-Supabase}"
+SLACK_ITEM="${OP_SLACK_ITEM:-Slack Bot}"
+GMAIL_ITEM="${OP_GMAIL_ITEM:-Gmail SMTP}"
+
+SUPABASE_URL=$(op item get "$SUPABASE_ITEM" --vault "$VAULT" --fields label=project_url --reveal)
+SUPABASE_KEY=$(op item get "$SUPABASE_ITEM" --vault "$VAULT" --fields label=service_role_key --reveal)
+SLACK_TOKEN=$(op item get "$SLACK_ITEM" --vault "$VAULT" --fields label=credential --reveal)
+SLACK_CHANNEL=$(op item get "$SLACK_ITEM" --vault "$VAULT" --fields label=channel --reveal)
+GMAIL_EMAIL=$(op item get "$GMAIL_ITEM" --vault "$VAULT" --fields label=email --reveal)
+GMAIL_APP_PASSWORD=$(op item get "$GMAIL_ITEM" --vault "$VAULT" --fields label=app_password --reveal)
 
 python3 -c "
 import json

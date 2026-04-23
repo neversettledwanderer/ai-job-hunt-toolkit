@@ -6,18 +6,36 @@
 import { chromium } from "npm:playwright";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendSlackMessage, getCaptureChannel } from "../lib/slack.ts";
-import { readCredential } from "../lib/credentials.ts";
+import { readCredential, readCredentialOptional } from "../lib/credentials.ts";
 
 // --- Config ---
-const CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+function findChromePath(): string {
+  const candidates = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS
+    "/usr/bin/google-chrome", // Linux
+    "/usr/bin/chromium-browser", // Linux Chromium
+    "/usr/bin/chromium", // Linux Chromium alt
+  ];
+  for (const path of candidates) {
+    try {
+      Deno.statSync(path);
+      return path;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error("Chrome/Chromium not found. Install Chrome or set CHROME_PATH env var.");
+}
+
+const CHROME_PATH = Deno.env.get("CHROME_PATH") || findChromePath();
 const AUTH_STATE_PATH = `${Deno.env.get("HOME")}/.playwright-auth.json`;
 const DELAY_MIN_MS = 5000;
 const DELAY_MAX_MS = 15000;
 
 // --- Supabase setup (credentials from 1Password) ---
 async function getSupabaseClient() {
-  const url = await readCredential("Your Supabase", "project_url");
-  const key = await readCredential("Your Supabase", "service_role_key");
+  const url = await readCredential("supabase_url");
+  const key = await readCredential("supabase_key");
   return createClient(url, key);
 }
 

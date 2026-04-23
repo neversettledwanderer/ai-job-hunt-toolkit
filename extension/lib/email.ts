@@ -11,8 +11,8 @@ export async function sendEmail(opts: {
   html: string;
   to?: string;
 }): Promise<void> {
-  const email = await readCredential("Your Gmail SMTP", "email");
-  const appPassword = await readCredential("Your Gmail SMTP", "app_password");
+  const email = await readCredential("gmail_email");
+  const appPassword = await readCredential("gmail_password");
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
