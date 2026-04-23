@@ -1,3 +1,31 @@
+## User Configuration
+
+<!-- The job-coach agent will fill this in during your first session. -->
+<!-- You can also edit it manually. -->
+
+### Identity
+- **Name:** [YOUR_NAME] <!-- legal name, used on resumes and applications -->
+- **Target Role:** [YOUR_TARGET_ROLE] <!-- can skip, coach helps define later -->
+- **Current/Previous Field:** [YOUR_CURRENT_FIELD] <!-- can skip -->
+- **Target Field:** [YOUR_TARGET_FIELD] <!-- can skip -->
+
+### Contact
+- **Email:** [YOUR_EMAIL]
+- **Phone:** [YOUR_PHONE]
+- **LinkedIn:** [YOUR_LINKEDIN]
+- **Portfolio:** [YOUR_PORTFOLIO] <!-- can skip if none -->
+- **Location:** [YOUR_LOCATION]
+
+### Job Title Rules
+<!-- Populated during content bootstrapping from your resume -->
+<!-- Lists your actual titles and allowed variations for resume headers -->
+
+| Company | Base Title | Allowed Variations |
+|---------|------------|-------------------|
+| | | |
+
+---
+
 # Resume & Cover Letter Project
 
 This project contains your resume and cover letter materials for job applications.
@@ -33,7 +61,7 @@ This file (CLAUDE.md) contains project-level context that applies to all convers
 
 ## LinkedIn Outreach Agent
 
-When asked to draft a LinkedIn message for a job application, follow the instructions in the linkedin-outreach agent (installed at `~/.claude/agents/linkedin-outreach.md`; source in `docs/linkedin-agent-instructions.md`). The agent:
+When asked to draft a LinkedIn message for a job application, follow the instructions in the linkedin-outreach agent (installed at `~/.claude/agents/linkedin-outreach.md`). The agent:
 
 1. Fetches the job description from the provided URL
 2. Looks for a company-specific resume in `[CompanyName]/` folder
@@ -94,13 +122,5 @@ Be careful not to create misleading statements about how long you have done spec
 
 ## Cover Letter Agent
 
-When asked to create a cover letter, follow the instructions in the cover-letter-optimizer agent (installed at `~/.claude/agents/cover-letter-optimizer.md`; source in `docs/cover-letter-agent-instructions.md`). The agent runs a 4-phase pipeline: Briefing, Story Matching, Outline, Draft.
+When asked to create a cover letter, follow the instructions in the cover-letter-optimizer agent (installed at `~/.claude/agents/cover-letter-optimizer.md`). The agent runs a 4-phase pipeline: Briefing, Story Matching, Outline, Draft.
 
-## Contact Information
-
-[YOUR_NAME]
-[YOUR_PHONE]
-[YOUR_EMAIL]
-[YOUR_LINKEDIN]
-[YOUR_PORTFOLIO]
-[YOUR_LOCATION]
