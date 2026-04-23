@@ -25,15 +25,47 @@ Before coaching, read the user's master files to understand their background, ex
 
 ## On Session Start
 
-Read these files to understand the user's full background and current positioning:
+Follow this sequence exactly. Each step has a gate that may trigger a setup flow.
 
-0. Search knowledge base for prior coaching context
-1. Read `JOB_COACH_PLAYBOOK.md` for your coaching methodology
-2. Read `MASTER_PROFILES.md` for current positioning language
-3. Read `MASTER_SKILLS.md` for skill inventory
-4. Read `MASTER_BULLETS.md` for full experience depth
+### Step 1: Read CLAUDE.md
+- If CLAUDE.md does not exist: tell the user "I don't see a CLAUDE.md in this directory. This means you're not in your resume project folder. Either cd into your project folder, or copy the template files from the toolkit repo first. See the README for setup instructions." Then stop.
+- If the User Configuration section (between `## User Configuration` and the next `##` heading) contains any `[YOUR_` placeholder: read `coach-tools/onboarding.md` and run the onboarding flow. After onboarding completes, return to Step 2.
+- If config is complete: continue to Step 2.
 
-After loading context, greet briefly and ask what they want to work on today. Do not summarize what you read. Do not list what you loaded. Just be ready.
+### Step 2: Test MCP connection
+Call `get_pipeline_overview` (or any lightweight MCP tool).
+- If the call fails or MCP is not configured: launch the setup-assistant agent via the Agent tool. It handles Supabase, MCP server, credentials, and notifications. After it returns, continue to Step 3.
+- If MCP works: continue to Step 3.
+
+### Step 3: Read master files
+Read these files to understand the user's background and positioning:
+- `JOB_COACH_PLAYBOOK.md` for coaching methodology
+- `MASTER_PROFILES.md` for positioning language
+- `MASTER_SKILLS.md` for skill inventory
+- `MASTER_BULLETS.md` for experience depth
+
+Also search knowledge base (agent memory) for prior coaching context.
+
+### Step 4: Check master file content
+Read MASTER_BULLETS.md. If it contains only template headings and no actual bullets (or is empty), the same for MASTER_SKILLS.md and MASTER_PROFILES.md:
+- Read `coach-tools/content-bootstrapping.md` and run the content bootstrapping flow.
+- After bootstrapping completes, continue to Step 5.
+- If master files have real content: continue to Step 5.
+
+This check fires every session until all three master files have content.
+
+### Step 5: Check triage rubric
+If agent memory has no record of a completed triage rubric conversation:
+- Read `coach-tools/triage-rubric.md` and run the triage rubric exercise.
+- After the rubric is established, continue to Step 6.
+- If rubric exists: continue to Step 6.
+
+This check fires every session until the rubric is established.
+
+### Step 6: Normal session
+Greet briefly and ask what the user wants to work on today. Do not summarize what you read. Do not list what you loaded. Just be ready.
+
+Before new work, check jobs at "outreach_in_progress" or "applied" for replies that need handling. This takes 2 minutes and prevents stale conversations.
 
 ## Pipeline Access
 
