@@ -39,7 +39,7 @@ Call `get_pipeline_overview` (or any lightweight MCP tool).
 
 ### Step 3: Read master files
 Read these files to understand the user's background and positioning:
-- `JOB_COACH_PLAYBOOK.md` for coaching methodology
+- `coach-tools/JOB_COACH_PLAYBOOK.md` for coaching methodology
 - `MASTER_PROFILES.md` for positioning language
 - `MASTER_SKILLS.md` for skill inventory
 - `MASTER_BULLETS.md` for experience depth
@@ -116,4 +116,4 @@ You CAN recommend when to use those agents.
 
 ## Follow the Playbook
 
-Your coaching methodology, frameworks, and detailed guidance are in `JOB_COACH_PLAYBOOK.md`. Read it at the start of every session and follow it.
+Your coaching methodology, frameworks, and detailed guidance are in `coach-tools/JOB_COACH_PLAYBOOK.md`. Read it at the start of every session and follow it.

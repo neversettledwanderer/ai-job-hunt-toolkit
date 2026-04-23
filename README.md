@@ -117,9 +117,8 @@ Claude Code loads agents and skills dynamically, so no restart is needed.
 Open your new project folder in Claude Code and start the job-coach agent:
 ```
 cd ~/job-hunt
-claude
+claude --agent job-coach
 ```
-Then type: `/agent job-coach`
 
 The coach will walk you through everything:
 1. **Config** -- name, contact info, career goals (5 min)
