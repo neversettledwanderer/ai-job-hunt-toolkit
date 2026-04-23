@@ -20,7 +20,7 @@ Dear [Company] Team,
 [Closing paragraph. Forward-looking, confident but not arrogant. What excites you about contributing.]
 
 Sincerely,
-[YOUR_NAME]
+Your Name
 
 ---
 
