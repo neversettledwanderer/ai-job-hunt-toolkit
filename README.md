@@ -7,7 +7,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 ```
                     +-----------------+
                     |   Claude Code   |
-                    |    (6 agents)   |
+                    |    (7 agents)   |
                     +--------+--------+
                              |
                     +--------v--------+
@@ -36,7 +36,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 
 ### Agents (`agents/`)
 
-Six specialized Claude Code agents, each with deep domain instructions:
+Seven specialized Claude Code agents, each with deep domain instructions:
 
 | Agent | Purpose |
 |-------|---------|
@@ -46,6 +46,7 @@ Six specialized Claude Code agents, each with deep domain instructions:
 | **linkedin-outreach** | Drafts personalized LinkedIn messages using 9 relationship-based templates |
 | **contact-discovery** | Guides batch contact research sessions with LinkedIn |
 | **job-coach** | Socratic career coaching with pipeline data access |
+| **setup-assistant** | Infrastructure setup: Supabase, MCP server, credentials, notifications |
 
 ### MCP Server (`mcp-server/`)
 
@@ -63,13 +64,10 @@ Deno scripts triggered by macOS launchd on a schedule:
 
 | Script | Schedule | Purpose |
 |--------|----------|---------|
-| `daily-status.ts --mode kickoff` | 12pm | Wake-up with targets and suggested jobs |
-| `daily-status.ts --mode checkin` | 6pm | Afternoon progress update |
-| `daily-status.ts --mode warning` | 11pm | Urgency alert if 50%+ of any track remains |
-| `daily-status.ts --mode scorecard` | 1am | Final totals, streaks, trends |
-| `daily-status.ts --mode weekly-summary` | Sunday 10am | List of previous week's applications |
-| `enrich-job-postings.ts` | 10am daily | Scrape LinkedIn for missing job details |
-| `posting-maintenance.ts` | Sunday 7am | Check active postings for expiration |
+| `daily-status.ts --mode daily` | Daily | Pipeline summary: last 7 days activity and next steps |
+| `daily-status.ts --mode weekly-summary` | Sunday 10am | Weekly application summary email |
+| `enrich-job-postings.ts` | 10am daily | Scrape LinkedIn for missing job details (opt-in, see warning below) |
+| `posting-maintenance.ts` | Sunday 7am | Check active postings for expiration (opt-in, see warning below) |
 
 ### Coaching Tools (`coach-tools/`)
 
@@ -93,6 +91,7 @@ Empty-but-structured files for you to fill in with your own content:
 - `MASTER_SKILLS.md` - Skills organized by category
 - `MASTER_COVER_LETTERS.md` - Gold standard cover letter archive
 - `PERSONAL_INFO.md` - Contact info for application forms
+- `ATS_TIPS.md` - Tips for specific Applicant Tracking Systems (Workday, Greenhouse, etc.)
 - `CLAUDE.md` - Project-level Claude Code instructions
 - `LINKEDIN_OUTREACH_TEMPLATES.md` - 9 categories of outreach message templates
 - `CAREER_NARRATIVE.md` - Personal story and positioning themes
@@ -104,52 +103,32 @@ Some coaching tools and agents also include `.example.md` files with filled-in s
 
 ## Quick Start
 
-### 1. Set Up Supabase
+### 1. Install
+Open Claude Code and paste this repo URL:
+```
+https://github.com/dfrysinger/ai-job-hunt-toolkit
+```
 
-1. Create a [Supabase](https://supabase.com) project
-2. Run `mcp-server/schema/schema.sql` in the SQL editor to create tables
-3. Deploy the MCP server as a Supabase Edge Function:
-   ```bash
-   supabase functions deploy job-hunt-mcp --project-ref YOUR_PROJECT_REF
-   ```
-4. Set environment variables on the Edge Function:
-   - `MCP_ACCESS_KEY` - a secret key you generate for API authentication
-   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set automatically
+Tell Claude: "Clone this repo and set it up for me as a job hunting toolkit. Copy agents/ to ~/.claude/agents/, skills/ to ~/.claude/skills/, and create a new project folder at ~/job-hunt/ with the contents of templates/ and coach-tools/."
 
-### 2. Configure Claude Code
+Claude Code loads agents and skills dynamically, so no restart is needed.
 
-1. Copy agent files from `agents/` to `~/.claude/agents/`
-2. Copy the skill file from `skills/job-hunt-mcp/SKILL.md` to `~/.claude/skills/job-hunt-mcp/SKILL.md`
-3. Add the MCP server to your Claude Code config (`~/.claude/settings.json`):
-   ```json
-   {
-     "mcpServers": {
-       "job-hunt": {
-         "url": "https://YOUR_PROJECT.supabase.co/functions/v1/job-hunt-mcp?key=YOUR_MCP_ACCESS_KEY"
-       }
-     }
-   }
-   ```
-4. Copy template files from `templates/` to your resume project folder
-5. Fill in the templates with your own content (bullets, skills, profiles, personal info)
-6. Update file paths in agent definitions to point to your resume folder
+### 2. First Run
+Open your new project folder in Claude Code and start the job-coach agent:
+```
+cd ~/job-hunt
+claude
+```
+Then type: `/agent job-coach`
 
-### 3. Set Up Scheduled Automations (macOS only)
+The coach will walk you through everything:
+1. **Config** -- name, contact info, career goals (5 min)
+2. **Infrastructure** -- Supabase database and MCP server setup (10-15 min)
+3. **Content** -- parse your existing resume(s) into the system (15-20 min)
+4. **Triage rubric** -- define your personal job prioritization system (10 min)
 
-1. Install Deno: `brew install deno`
-2. Set up credential caching:
-   - Store your Supabase, Slack, and Gmail credentials in 1Password
-   - Update `extension/scripts/refresh-creds.sh` with your 1Password item names
-   - Run `./extension/scripts/refresh-creds.sh` to cache credentials
-3. Update paths in the `.plist` files in `extension/launchd/` to match your installation
-4. Copy `.plist` files to `~/Library/LaunchAgents/`
-5. Load them: `launchctl load ~/Library/LaunchAgents/com.jobhunt.*.plist`
-
-### 4. Set Up Notifications
-
-**Slack:** Create a Slack app with a bot token and add it to a channel for notifications.
-
-**Email:** Set up a Gmail App Password for SMTP notifications.
+### 3. Start Hunting
+After setup, every session starts with the coach. It knows your pipeline, suggests what to work on next, and hands off to specialized agents for resume writing, cover letters, outreach, and applications.
 
 ## Architecture Decisions
 
@@ -163,13 +142,17 @@ Some coaching tools and agents also include `.example.md` files with filled-in s
 
 **Why attribution logging?** Every record change is logged with who/what made the change. This is critical for debugging when multiple agents and automations touch the same data, and it powers the daily accountability tracking.
 
+**Why tiered credentials?** The toolkit supports three credential backends: 1Password (most secure), OS keychain (macOS Keychain or Linux secret-tool), and `.env` files (simplest). The setup-assistant detects what's available and configures the best option. This means the toolkit works on any system without requiring 1Password.
+
+**Cross-platform notes:** Scheduled automations use macOS launchd. On Linux, use cron or systemd instead. The setup-assistant only configures launchd on macOS.
+
 ## LinkedIn Automation Warning
 
-The `enrich-job-postings.ts` and `posting-maintenance.ts` scripts use Playwright to visit LinkedIn job posting pages and extract publicly visible information. This is done with respectful delays between requests and uses your existing browser session.
+The `enrich-job-postings.ts` and `posting-maintenance.ts` scripts use Playwright to visit LinkedIn job posting pages and extract publicly visible information. **The author of this toolkit received a warning from LinkedIn for using these scripts**, even with long delays between requests.
 
-**Be aware:** Automated access to LinkedIn may violate their Terms of Service. Use at your own risk. These scripts are designed to be conservative (long delays, small batches, headless browsing with your own auth), but LinkedIn's enforcement is unpredictable.
+These scripts violate LinkedIn's Terms of Service. They are NOT enabled by default and must be explicitly opted into during setup. Use at your own risk.
 
-The `contact-discovery` agent does NOT scrape LinkedIn automatically. It opens search URLs in your browser for manual browsing and parses whatever you copy-paste into a scratchpad.
+The `contact-discovery` agent does NOT scrape LinkedIn. It opens search URLs in your browser for manual browsing and parses whatever you copy-paste into a scratchpad.
 
 ## Credits
 
