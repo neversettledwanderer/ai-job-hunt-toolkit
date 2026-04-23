@@ -14,7 +14,7 @@ A methodology for researching how others have positioned themselves for similar 
 ### Step 1: Find Comparable Profiles
 
 Use WebSearch and WebFetch to find people who:
-- Made a similar transition (from [YOUR_CURRENT_FIELD] to [YOUR_TARGET_FIELD])
+- Made a similar transition (from the user's current field (from CLAUDE.md) to the user's target field (from CLAUDE.md))
 - Hold the type of role the user is targeting
 - Have non-traditional backgrounds for the target role (career switchers from various fields)
 
@@ -32,14 +32,14 @@ For each profile found, note:
 - **About section:** What narrative do they tell? How do they bridge their past to their current role?
 - **Experience framing:** How do they describe their pre-transition roles? What language do they use?
 - **Skills emphasis:** What do they lead with?
-- **Content/thought leadership:** Are they writing or speaking about [TARGET_FIELD] topics?
+- **Content/thought leadership:** Are they writing or speaking about the user's target field (from CLAUDE.md) topics?
 
 ### Step 3: Identify Patterns
 
 Look for:
 - Common positioning strategies that appear across multiple successful transitioners
-- Language patterns that bridge [YOUR_CURRENT_FIELD] to [YOUR_TARGET_FIELD]
-- How they handle the "years of [TARGET_FIELD] experience" question
+- Language patterns that bridge the user's current field (from CLAUDE.md) to the user's target field (from CLAUDE.md)
+- How they handle the "years of the user's target field (from CLAUDE.md) experience" question
 - Whether they downplay or highlight their previous-field background
 - What they do differently from traditional candidates
 

@@ -1,6 +1,6 @@
 # Career Transition Frameworks
 
-Use when the conversation specifically touches on the user's non-standard background, how to address the gap between [YOUR_CURRENT_FIELD] and [YOUR_TARGET_FIELD], or other positioning challenges. This is a tool to pull in when needed, not the coach's core identity.
+Use when the conversation specifically touches on the user's non-standard background, how to address the gap between the user's current field (from CLAUDE.md) and the user's target field (from CLAUDE.md), or other positioning challenges. This is a tool to pull in when needed, not the coach's core identity.
 
 ## Ibarra's Working Identity (Detailed Strategies)
 
@@ -9,20 +9,20 @@ From Herminia Ibarra's research at Harvard Business School. The playbook interna
 ### Strategy 1: Experiment with New Professional Activities
 
 Test new identities through real work, not just thinking about them.
-- Advisory work for companies in [YOUR_TARGET_FIELD], even informal
-- Contributing to [YOUR_TARGET_FIELD] communities: writing, commenting, sharing insights
-- Side projects that demonstrate [YOUR_TARGET_FIELD] thinking
-- Volunteering for cross-functional projects that are [YOUR_TARGET_FIELD]-adjacent
-- Fractional or consulting work in [YOUR_TARGET_FIELD]
+- Advisory work for companies in the user's target field (from CLAUDE.md), even informal
+- Contributing to the user's target field (from CLAUDE.md) communities: writing, commenting, sharing insights
+- Side projects that demonstrate the user's target field (from CLAUDE.md) thinking
+- Volunteering for cross-functional projects that are the user's target field (from CLAUDE.md)-adjacent
+- Fractional or consulting work in the user's target field (from CLAUDE.md)
 
 The key: each experiment provides data about what fits and builds evidence for the narrative.
 
 ### Strategy 2: Interact in New Networks
 
-Your existing network sees you as [YOUR_CURRENT_FIELD]. New connections see you as who you are becoming.
-- Join [YOUR_TARGET_FIELD] communities, not [YOUR_CURRENT_FIELD] communities
-- Attend [YOUR_TARGET_FIELD] events, not [YOUR_CURRENT_FIELD] events
-- Connect with leaders in [YOUR_TARGET_FIELD], not just peers in [YOUR_CURRENT_FIELD]
+Your existing network sees you as the user's current field (from CLAUDE.md). New connections see you as who you are becoming.
+- Join the user's target field (from CLAUDE.md) communities, not the user's current field (from CLAUDE.md) communities
+- Attend the user's target field (from CLAUDE.md) events, not the user's current field (from CLAUDE.md) events
+- Connect with leaders in the user's target field (from CLAUDE.md), not just peers in the user's current field (from CLAUDE.md)
 - Seek out other career transitioners who have made a similar shift
 
 The key: new networks don't have preconceptions about your identity. They take you at face value.
@@ -37,13 +37,13 @@ The career story is not fixed. It evolves as you gather data from experiments an
 
 ## The Bridge Pivot (Detailed Methodology)
 
-The playbook holds the positioning posture. This file has the detailed bridging approach for [YOUR_CURRENT_FIELD]-to-[YOUR_TARGET_FIELD] transitions.
+The playbook holds the positioning posture. This file has the detailed bridging approach for the user's current field (from CLAUDE.md)-to-the user's target field (from CLAUDE.md) transitions.
 
 ### Skills That Map Across Your Transition
 
 Create a mapping table for your specific transition. Structure:
 
-| [YOUR_CURRENT_FIELD] Skill | [YOUR_TARGET_FIELD] Equivalent | How to Reframe |
+| the user's current field (from CLAUDE.md) Skill | the user's target field (from CLAUDE.md) Equivalent | How to Reframe |
 |---|---|---|
 | [Skill from current role] | [Equivalent in target role] | [How to describe it in target-role language] |
 | [Skill from current role] | [Equivalent in target role] | [How to describe it in target-role language] |
@@ -62,22 +62,22 @@ Phrases to stop using and what to use instead. Build your own list:
 
 | Stop Saying | Start Saying |
 |---|---|
-| "I led the [YOUR_CURRENT_FIELD] team" | "I led [TARGET_FIELD-appropriate description]" |
+| "I led the the user's current field (from CLAUDE.md) team" | "I led [TARGET_FIELD-appropriate description]" |
 | "I did [CURRENT_FIELD activity]" | "I led [TARGET_FIELD equivalent activity]" |
 | "I worked with the [TARGET_ROLE]" | "I partnered with [TARGET_ROLE] on strategy" or "I co-owned [shared responsibility]" |
-| "I'm a [CURRENT_TITLE] moving into [TARGET_FIELD]" | "I'm a [TARGET_FIELD] leader with deep [CURRENT_FIELD] expertise" |
-| "I don't have [TARGET_FIELD] experience" | "I've been doing [TARGET_FIELD] work from the [CURRENT_FIELD] side for [X] years" |
+| "I'm a [CURRENT_TITLE] moving into the user's target field (from CLAUDE.md)" | "I'm a the user's target field (from CLAUDE.md) leader with deep the user's current field (from CLAUDE.md) expertise" |
+| "I don't have the user's target field (from CLAUDE.md) experience" | "I've been doing the user's target field (from CLAUDE.md) work from the the user's current field (from CLAUDE.md) side for [X] years" |
 
 ## Addressing Career Switcher Bias
 
-**The problem:** Hiring managers pattern-match. "[YOUR_CURRENT_FIELD] leader" triggers "this person is a [CURRENT_FIELD professional], not a [TARGET_FIELD professional]." The resume and LinkedIn never get a fair read.
+**The problem:** Hiring managers pattern-match. "the user's current field (from CLAUDE.md) leader" triggers "this person is a [CURRENT_FIELD professional], not a [TARGET_FIELD professional]." The resume and LinkedIn never get a fair read.
 
 **Strategies:**
-- Lead with [TARGET_FIELD]-equivalent accomplishments, not [CURRENT_FIELD] accomplishments
-- Use [TARGET_FIELD] language throughout, see Language Translation Guide above
-- Get people with [TARGET_FIELD] titles to vouch for your [TARGET_FIELD] skills: recommendations, references
-- Build portfolio-style case studies that show [TARGET_FIELD] thinking, not [CURRENT_FIELD] artifacts
-- Target roles where the [CURRENT_FIELD]-to-[TARGET_FIELD] bridge is valued: companies where your [CURRENT_FIELD] expertise is a differentiator
+- Lead with the user's target field (from CLAUDE.md)-equivalent accomplishments, not the user's current field (from CLAUDE.md) accomplishments
+- Use the user's target field (from CLAUDE.md) language throughout, see Language Translation Guide above
+- Get people with the user's target field (from CLAUDE.md) titles to vouch for your the user's target field (from CLAUDE.md) skills: recommendations, references
+- Build portfolio-style case studies that show the user's target field (from CLAUDE.md) thinking, not the user's current field (from CLAUDE.md) artifacts
+- Target roles where the the user's current field (from CLAUDE.md)-to-the user's target field (from CLAUDE.md) bridge is valued: companies where your the user's current field (from CLAUDE.md) expertise is a differentiator
 
 ## Optional Considerations
 
@@ -89,30 +89,30 @@ If relevant, see resources on addressing age bias, career-switcher bias, or othe
 
 ## Proof-of-Skill Strategies
 
-Since a traditional [TARGET_FIELD] resume won't show [TARGET_FIELD] tenure, alternative proof points:
+Since a traditional the user's target field (from CLAUDE.md) resume won't show the user's target field (from CLAUDE.md) tenure, alternative proof points:
 
 ### Portfolio
-- Case studies showing [TARGET_FIELD] thinking, not just [CURRENT_FIELD] artifacts
+- Case studies showing the user's target field (from CLAUDE.md) thinking, not just the user's current field (from CLAUDE.md) artifacts
 - Structure: Problem identified -> data/research -> solution proposed -> business impact
 - Focus on decisions made, trade-offs considered, and outcomes achieved
-- Include examples where you influenced [TARGET_FIELD] direction even without the title
+- Include examples where you influenced the user's target field (from CLAUDE.md) direction even without the title
 
 ### Thought Leadership
-- Writing about [TARGET_FIELD] strategy demonstrates strategic thinking publicly
-- Topics that position you as a [TARGET_FIELD] thinker, not a [CURRENT_FIELD] professional
-- LinkedIn posts, blog posts, or articles in [TARGET_FIELD] publications
+- Writing about the user's target field (from CLAUDE.md) strategy demonstrates strategic thinking publicly
+- Topics that position you as a the user's target field (from CLAUDE.md) thinker, not a the user's current field (from CLAUDE.md) professional
+- LinkedIn posts, blog posts, or articles in the user's target field (from CLAUDE.md) publications
 
 ### Advisory and Fractional Work
-- Even informal advisory relationships build [TARGET_FIELD] credibility
+- Even informal advisory relationships build the user's target field (from CLAUDE.md) credibility
 - Fractional leadership work provides title-appropriate experience
 - Board of advisors positions at relevant startups
 
 ### Community Contribution
-- Active participation in [TARGET_FIELD] communities
-- Speaking at [TARGET_FIELD] events
+- Active participation in the user's target field (from CLAUDE.md) communities
+- Speaking at the user's target field (from CLAUDE.md) events
 - Open source contributions or community projects
 
 ### Leveraging Your Strongest Proof Point
-- Identify the experience in your background that most directly maps to [YOUR_TARGET_FIELD]
-- Frame every accomplishment from that experience in [TARGET_FIELD] terms, not [CURRENT_FIELD] terms
-- Emphasize the aspects that hiring managers care about most for [TARGET_FIELD] roles
+- Identify the experience in your background that most directly maps to the user's target field (from CLAUDE.md)
+- Frame every accomplishment from that experience in the user's target field (from CLAUDE.md) terms, not the user's current field (from CLAUDE.md) terms
+- Emphasize the aspects that hiring managers care about most for the user's target field (from CLAUDE.md) roles

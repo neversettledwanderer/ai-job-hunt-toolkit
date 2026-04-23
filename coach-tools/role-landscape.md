@@ -1,6 +1,6 @@
 # Target Role Landscape
 
-Reference for understanding the [YOUR_TARGET_ROLE] market: how roles are defined, what hiring managers want, how top candidates position themselves, and the vocabulary needed to be fluent. This is not just about your career transition. It's about understanding how your entire target field works.
+Reference for understanding the the user's target role (from CLAUDE.md) market: how roles are defined, what hiring managers want, how top candidates position themselves, and the vocabulary needed to be fluent. This is not just about your career transition. It's about understanding how your entire target field works.
 
 **Important:** Use WebSearch to keep this guidance current. Role landscapes shift fast and what was true 6 months ago may not be true today. Always verify against current market data before advising.
 
@@ -10,13 +10,13 @@ Reference for understanding the [YOUR_TARGET_ROLE] market: how roles are defined
 
 Most role types have meaningful sub-categories with different expectations. Research and document them here:
 
-**[YOUR_TARGET_ROLE] Variation 1:**
+**the user's target role (from CLAUDE.md) Variation 1:**
 - Core responsibilities
 - Expected skills and experience
 - Who you work with daily
 - What makes candidates successful
 
-**[YOUR_TARGET_ROLE] Variation 2:**
+**the user's target role (from CLAUDE.md) Variation 2:**
 - Core responsibilities
 - Expected skills and experience
 - Who you work with daily
@@ -65,7 +65,7 @@ Document the key terms and concepts you need to speak fluently about in your tar
 
 ## Interview Patterns
 
-### How [YOUR_TARGET_ROLE] Interviews Differ
+### How the user's target role (from CLAUDE.md) Interviews Differ
 
 Document what's unique about interviews for this role type vs. general interviews:
 - **Domain case studies:** What types of scenarios do they present?
@@ -93,18 +93,18 @@ Document the typical case study structures used in interviews for your target ro
 ### How to Research Current Market State
 
 Periodically research:
-- LinkedIn posts from people in [YOUR_TARGET_ROLE] about their work and hiring
-- Job postings for [YOUR_TARGET_ROLE] to track evolving requirements
+- LinkedIn posts from people in the user's target role (from CLAUDE.md) about their work and hiring
+- Job postings for the user's target role (from CLAUDE.md) to track evolving requirements
 - Blog posts and conference talks from leaders in the field
 - Hiring manager posts about what they look for
 - Salary data and market trends
 
 Search queries:
-- "what I look for hiring [YOUR_TARGET_ROLE]"
-- "[YOUR_TARGET_ROLE] interview questions [YEAR]"
-- "[YOUR_TARGET_ROLE] skills"
-- "[YOUR_TARGET_ROLE] career advice"
-- site:linkedin.com "[YOUR_TARGET_ROLE]" "hiring" OR "looking for"
+- "what I look for hiring the user's target role (from CLAUDE.md)"
+- "the user's target role (from CLAUDE.md) interview questions [YEAR]"
+- "the user's target role (from CLAUDE.md) skills"
+- "the user's target role (from CLAUDE.md) career advice"
+- site:linkedin.com "the user's target role (from CLAUDE.md)" "hiring" OR "looking for"
 
 ### What Proof Points Successful Candidates Use
 
