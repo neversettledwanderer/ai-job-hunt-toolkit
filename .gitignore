@@ -1,1 +1,26 @@
+# Worktrees
 .worktrees/
+
+# Credentials and secrets
+.env
+*.json.bak
+.playwright-auth.json
+
+# Credential caches
+creds.json
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp files
+/tmp/
+
+# 1Password token (if cached locally)
+op-token.txt
