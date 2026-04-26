@@ -54,9 +54,59 @@ Always run `snapshot` before interacting with a page to get current element refs
 4. NEVER call `open` again -- use `goto <url>` to navigate within the existing session
 5. NEVER run Playwright commands in the background or in parallel -- run them sequentially
 
+## Quick Apply Flows (NEW)
+
+Some job boards have simplified "quick apply" options that require minimal input. Detect and use these when available.
+
+### Indeed Easy Apply
+
+**Detection**: URL pattern `indeed.com/r/*` with "Easy Apply" button visible
+
+**Characteristics**:
+- Single-click or minimal-form application
+- Uses existing Indeed profile (email, phone, resume)
+- Usually no cover letter
+- Instant confirmation
+
+**Workflow**:
+1. Navigate to the job posting URL
+2. Click the "Easy Apply" button (if present)
+3. Indeed may auto-fill from your profile; review and submit
+4. Confirm application via `update_application(job_posting_id, status="applied")`
+5. Done (2-minute process)
+
+**Fallback**: If "Easy Apply" is not available, fall back to manual application (see ATS Detection below)
+
+### LinkedIn Apply
+
+**Detection**: URL pattern `linkedin.com/jobs/view/*` with "Easy Apply" button visible
+
+**Characteristics**:
+- LinkedIn's one-click apply feature
+- Uses LinkedIn profile information
+- May request resume, cover letter, custom questions
+- Custom questions vary by role
+
+**Workflow**:
+1. Navigate to the job posting URL
+2. Click the "Easy Apply" button (if present)
+3. LinkedIn presents a form with pre-filled fields from your profile
+4. Fill any custom questions
+5. Upload resume if requested (or provide existing LinkedIn resume)
+6. Submit
+7. Confirm application via `update_application(job_posting_id, status="applied")`
+8. Done (3-5 minute process depending on custom questions)
+
+**Fallback**: If "Easy Apply" is not available, fall back to manual application (see ATS Detection below)
+
 ## ATS Detection
 
 Detect the ATS platform from the job posting URL before interacting with the site. This determines how to search for tips and how to save new learnings.
+
+**Priority order**:
+1. **Check for quick apply** (Indeed Easy Apply, LinkedIn Apply) -- fastest path
+2. **Detect ATS platform** (Workday, Greenhouse, Lever, etc.) -- standard form fill
+3. **Fall back to manual** (open URL, user completes) -- when ATS is unknown or unavailable
 
 ### URL Pattern Lookup
 
@@ -128,11 +178,16 @@ append it to ATS_TIPS.md under the relevant platform section.
 - If no PDF exists, ask the user if they want to generate one
 - Check for existing cover letter in the same folder
 
-### Step 4: Launch Browser
+### Step 4: Launch Browser & Detect Application Flow
 - Launch Chrome (visible on desktop, NOT headless)
 - Navigate to the job posting URL
-- Look for an "Apply" or "Apply Now" button and click it
-- **ATS detection**: After clicking Apply, detect the ATS platform from the URL
+- **Quick Apply Detection**: Look for "Easy Apply" button (Indeed, LinkedIn) -- if present, use the quick apply workflow above
+  - Indeed: expect single-click or minimal form
+  - LinkedIn: expect pre-filled form with possible custom questions
+  - If quick apply available, follow the quick apply section and skip to Step 6
+- **ATS Detection**: If quick apply is not available, detect the ATS platform from the URL
+  - Identify which ATS platform (Workday, Greenhouse, Lever, etc.) from the patterns listed above
+  - Read relevant ATS_TIPS section
 - If the site requires login/account, handle it (see Account Creation section below)
 
 ### Step 5: Per-Page Fill Loop

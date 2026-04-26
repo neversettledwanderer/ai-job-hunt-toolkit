@@ -36,17 +36,51 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 
 ### Agents (`agents/`)
 
-Seven specialized Claude Code agents, each with deep domain instructions:
+Nine specialized Claude Code agents, each with deep domain instructions:
 
 | Agent | Purpose |
 |-------|---------|
+| **job-coach** | Entry point: career coaching, pipeline triage, execution workflow |
+| **job-finder-indeed** | Search Indeed API for matching jobs; add to pipeline (daily or on-demand) |
+| **job-finder-linkedin** | Search LinkedIn Jobs API for matching jobs; add to pipeline (daily or on-demand) |
 | **resume-optimizer** | Creates tailored resumes from job postings using a master bullet library |
 | **cover-letter-optimizer** | 4-phase pipeline: Briefing, Story Matching, Outline, Draft |
-| **job-applicator** | Fills out application forms via Playwright (Workday, Greenhouse, Lever, etc.) |
+| **job-applicator** | Fills out application forms via Playwright; supports Indeed Easy Apply & LinkedIn Apply |
 | **linkedin-outreach** | Drafts personalized LinkedIn messages using 9 relationship-based templates |
 | **contact-discovery** | Guides batch contact research sessions with LinkedIn |
-| **job-coach** | Socratic career coaching with pipeline data access |
 | **setup-assistant** | Infrastructure setup: Supabase, MCP server, credentials, notifications |
+
+### Job Discovery Workflow (NEW)
+
+**Automated job discovery** from Indeed and LinkedIn APIs replaces manual browsing:
+
+```
+Daily Automation (6am / 8am)
+    ↓
+job-finder-indeed + job-finder-linkedin search APIs
+    ↓
+New jobs added to Supabase (source=indeed or source=linkedin)
+    ↓
+Session Start
+    ↓
+job-coach detects untriaged jobs
+    ↓
+Bulk triage: High/Medium/Low priority (5 min)
+    ↓
+Execution workflow: Resume → Cover Letter → Apply
+```
+
+**Two discovery modes**:
+- **Daily Scheduled** (opt-in): Automated searches at 6am (Indeed) & 8am (LinkedIn) based on `.job-discovery-config.yaml`
+- **On-Demand** (always available): Ask job-coach "Search Indeed for [role] in [city]" anytime
+
+**Key benefits**:
+- Official APIs only (no ToS violations, unlike LinkedIn scraping)
+- 3-5x more job candidates per week
+- Hybrid control: auto-discovery + manual override
+- Full deduplication across sources
+
+**Setup**: During `setup-assistant`, add Indeed API key and LinkedIn OAuth, then configure `.job-discovery-config.yaml` with target searches.
 
 ### MCP Server (`mcp-server/`)
 
@@ -64,6 +98,7 @@ Deno scripts triggered by macOS launchd on a schedule:
 
 | Script | Schedule | Purpose |
 |--------|----------|---------|
+| `daily-job-discovery.ts` (NEW) | 6am & 8am | Run job-finder-indeed and job-finder-linkedin agents (opt-in) |
 | `daily-status.ts --mode daily` | Daily | Pipeline summary: last 7 days activity and next steps |
 | `daily-status.ts --mode weekly-summary` | Sunday 10am | Weekly application summary email |
 | `enrich-job-postings.ts` | 10am daily | Scrape LinkedIn for missing job details (opt-in, see warning below) |

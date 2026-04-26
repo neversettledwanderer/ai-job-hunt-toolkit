@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS job_postings (
     networking_status TEXT DEFAULT 'not_started'
         CHECK (networking_status IN ('not_started', 'researched', 'outreach_in_progress', 'done')),
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'closed')),
+    triaged_at TIMESTAMPTZ,  -- NEW: timestamp when job was triaged (NULL = untriaged)
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     CONSTRAINT chk_triage_rank_positive CHECK (triage_rank >= 1),
     CONSTRAINT chk_triage_rank_needs_priority CHECK (triage_rank IS NULL OR priority IS NOT NULL)
@@ -138,11 +139,13 @@ CREATE TABLE IF NOT EXISTS daily_stats (
     date DATE NOT NULL,
     track TEXT NOT NULL CHECK (track IN (
         'resume_creation', 'resume_review', 'contact_discovery',
-        'outreach', 'application_submission'
+        'outreach', 'application_submission', 'job_discovery'
     )),
     completed INTEGER NOT NULL DEFAULT 0,
     target INTEGER NOT NULL DEFAULT 5,
     deficit INTEGER NOT NULL DEFAULT 0,
+    discovered_jobs INTEGER,  -- NEW: count of jobs discovered on this date
+    discovered_sources JSONB,  -- NEW: {indeed: 5, linkedin: 3} format
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
     UNIQUE (date, track)
 );

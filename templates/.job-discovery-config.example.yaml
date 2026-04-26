@@ -1,0 +1,50 @@
+# Job Discovery Configuration
+# Copy this file to ~/job-hunt/.job-discovery-config.yaml and fill in your target searches
+
+indeed:
+  enabled: true
+  # Search params for Indeed API
+  # Recommended: 1-3 searches per day (more than that gets overwhelming)
+  searches:
+    - title: "Software Engineer"
+      location: "San Francisco, CA"
+      keywords: "Python,TypeScript,backend"  # comma-separated keywords (AND logic)
+      radius: 50  # miles
+      salary_min: 150000  # USD annual
+      remote: "any"  # "remote", "hybrid", "onsite", or "any"
+
+    - title: "Senior Backend Engineer"
+      location: "Remote"
+      keywords: "Go,Rust,Kubernetes"
+      salary_min: 180000
+      remote: "remote"
+
+linkedin:
+  enabled: true
+  # Search params for LinkedIn Jobs API
+  searches:
+    - title: "Software Engineer"
+      locations: ["San Francisco, CA", "Remote"]  # list of locations
+      experience_level: ["mid", "senior"]  # "entry", "mid", "senior", "director", "c_level"
+      industries: ["software", "tech"]  # optional
+      companies_prefer: ["Stripe", "Google", "Meta"]  # optional: prefer these
+      companies_avoid: []  # optional: skip these
+
+    - title: "Staff Engineer"
+      locations: ["San Francisco, CA"]
+      experience_level: ["senior"]
+      companies_prefer: ["Anthropic", "OpenAI"]
+
+# Schedule settings
+schedule:
+  enabled: true
+  # Times (24h format) when searches run daily
+  indeed_time: "06:00"  # 6am
+  linkedin_time: "08:00"  # 8am
+  digest_time: "10:00"  # 10am (send email with summary)
+
+# Notification settings
+notifications:
+  send_digest_email: true  # Send daily summary of new jobs
+  send_slack: false  # Send to Slack (if configured)
+  max_jobs_per_digest: 10  # Cap number of jobs in daily email
