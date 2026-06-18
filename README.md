@@ -43,6 +43,7 @@ Nine specialized Claude Code agents, each with deep domain instructions:
 | **job-coach** | Entry point: career coaching, pipeline triage, execution workflow |
 | **job-finder-indeed** | Search Indeed API for matching jobs; add to pipeline (daily or on-demand) |
 | **job-finder-linkedin** | Search LinkedIn Jobs API for matching jobs; add to pipeline (daily or on-demand) |
+| **job-finder-adzuna** | Search Adzuna API across UK job boards (Reed, TotalJobs, Guardian Jobs, CV-Library and more); add to pipeline |
 | **resume-optimizer** | Creates tailored resumes from job postings using a master bullet library |
 | **cover-letter-optimizer** | 4-phase pipeline: Briefing, Story Matching, Outline, Draft |
 | **job-applicator** | Fills out application forms via Playwright; supports Indeed Easy Apply & LinkedIn Apply |
@@ -52,14 +53,14 @@ Nine specialized Claude Code agents, each with deep domain instructions:
 
 ### Job Discovery Workflow (NEW)
 
-**Automated job discovery** from Indeed and LinkedIn APIs replaces manual browsing:
+**Automated job discovery** from Indeed, LinkedIn, and Adzuna APIs replaces manual browsing:
 
 ```
-Daily Automation (6am / 8am)
+Daily Automation (6am / 8am / 7am)
     ↓
-job-finder-indeed + job-finder-linkedin search APIs
+job-finder-indeed + job-finder-linkedin + job-finder-adzuna search APIs
     ↓
-New jobs added to Supabase (source=indeed or source=linkedin)
+New jobs added to Supabase (source=indeed / source=linkedin / source=adzuna)
     ↓
 Session Start
     ↓
@@ -71,16 +72,16 @@ Execution workflow: Resume → Cover Letter → Apply
 ```
 
 **Two discovery modes**:
-- **Daily Scheduled** (opt-in): Automated searches at 6am (Indeed) & 8am (LinkedIn) based on `.job-discovery-config.yaml`
-- **On-Demand** (always available): Ask job-coach "Search Indeed for [role] in [city]" anytime
+- **Daily Scheduled** (opt-in): Automated searches based on `.job-discovery-config.yaml`
+- **On-Demand** (always available): Ask job-coach "Search Indeed/LinkedIn/Adzuna for [role] in [city]" anytime
 
 **Key benefits**:
 - Official APIs only (no ToS violations, unlike LinkedIn scraping)
-- 3-5x more job candidates per week
+- 3-5x more job candidates per week — Adzuna adds UK board-specific listings missed by Indeed and LinkedIn
 - Hybrid control: auto-discovery + manual override
-- Full deduplication across sources
+- Full deduplication across all sources
 
-**Setup**: During `setup-assistant`, add Indeed API key and LinkedIn OAuth, then configure `.job-discovery-config.yaml` with target searches.
+**Setup**: During `setup-assistant`, configure Indeed API key, LinkedIn OAuth, and Adzuna credentials (free at https://developer.adzuna.com/), then set up `.job-discovery-config.yaml` with target searches.
 
 ### MCP Server (`mcp-server/`)
 
@@ -116,6 +117,25 @@ Generic career coaching frameworks used by the job-coach agent:
 - Odyssey plan (three 5-year paths)
 - Role landscape reference (target role types, expectations, vocabulary)
 - Execution workflow (state machine for job processing)
+
+### Applications Completed (`Applications Completed/`)
+
+A folder at the project root that stores job application folders once the application has been submitted.
+
+```
+job-hunt/
+├── Applications Completed/
+│   ├── Company Name A/
+│   │   ├── CV.docx
+│   │   ├── Cover Letter.docx
+│   │   └── JD - Role Title.md
+│   ├── Company Name B/
+│   └── ...
+├── Active Company/          ← in-progress application
+└── ...
+```
+
+**Convention:** While an application is being prepared, the company folder lives in the project root. Once the user confirms submission, the job-coach agent moves the folder here and logs the application in the pipeline DB — both steps happen together as a single atomic action.
 
 ### Templates (`templates/`)
 
