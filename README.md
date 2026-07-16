@@ -7,7 +7,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 ```
                     +-----------------+
                     |   Claude Code   |
-                    |    (7 agents)   |
+                    |   (10 agents)   |
                     +--------+--------+
                              |
                     +--------v--------+
@@ -36,7 +36,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 
 ### Agents (`agents/`)
 
-Nine specialized Claude Code agents, each with deep domain instructions:
+Ten specialized Claude Code agents, each with deep domain instructions:
 
 | Agent | Purpose |
 |-------|---------|
@@ -51,13 +51,11 @@ Nine specialized Claude Code agents, each with deep domain instructions:
 | **contact-discovery** | Guides batch contact research sessions with LinkedIn |
 | **setup-assistant** | Infrastructure setup: Supabase, MCP server, credentials, notifications |
 
-### Job Discovery Workflow (NEW)
+### Job Discovery Workflow
 
-**Automated job discovery** from Indeed, LinkedIn, and Adzuna APIs replaces manual browsing:
+**Job discovery** from Indeed, LinkedIn, and Adzuna APIs replaces manual browsing:
 
 ```
-Daily Automation (6am / 8am / 7am)
-    ↓
 job-finder-indeed + job-finder-linkedin + job-finder-adzuna search APIs
     ↓
 New jobs added to Supabase (source=indeed / source=linkedin / source=adzuna)
@@ -72,16 +70,15 @@ Execution workflow: Resume → Cover Letter → Apply
 ```
 
 **Two discovery modes**:
-- **Daily Scheduled** (opt-in): Automated searches based on `.job-discovery-config.yaml`
-- **On-Demand** (always available): Ask job-coach "Search Indeed/LinkedIn/Adzuna for [role] in [city]" anytime
+- **On-Demand** (fully working today): Ask job-coach "Search Indeed/LinkedIn/Adzuna for [role] in [city]" anytime
+- **Daily Scheduled** (config format exists, launchd wiring not yet built): `.job-discovery-config.example.yaml` at the repo root defines the target searches and schedule for a future `daily-job-discovery.ts` runner. Until that script exists, treat the config as documentation of intent and drive discovery on-demand instead.
 
 **Key benefits**:
 - Official APIs only (no ToS violations, unlike LinkedIn scraping)
 - 3-5x more job candidates per week — Adzuna adds UK board-specific listings missed by Indeed and LinkedIn
-- Hybrid control: auto-discovery + manual override
 - Full deduplication across all sources
 
-**Setup**: During `setup-assistant`, configure Indeed API key, LinkedIn OAuth, and Adzuna credentials (free at https://developer.adzuna.com/), then set up `.job-discovery-config.yaml` with target searches.
+**Setup**: During `setup-assistant`, configure Indeed API key, LinkedIn OAuth, and Adzuna credentials (free at https://developer.adzuna.com/), then copy `.job-discovery-config.example.yaml` to `~/job-hunt/.job-discovery-config.yaml` and fill in your target searches.
 
 ### MCP Server (`mcp-server/`)
 
@@ -99,11 +96,25 @@ Deno scripts triggered by macOS launchd on a schedule:
 
 | Script | Schedule | Purpose |
 |--------|----------|---------|
-| `daily-job-discovery.ts` (NEW) | 6am & 8am | Run job-finder-indeed and job-finder-linkedin agents (opt-in) |
 | `daily-status.ts --mode daily` | Daily | Pipeline summary: last 7 days activity and next steps |
 | `daily-status.ts --mode weekly-summary` | Sunday 10am | Weekly application summary email |
 | `enrich-job-postings.ts` | 10am daily | Scrape LinkedIn for missing job details (opt-in, see warning below) |
 | `posting-maintenance.ts` | Sunday 7am | Check active postings for expiration (opt-in, see warning below) |
+
+A scheduled `daily-job-discovery.ts` runner (to automate the Indeed/LinkedIn/Adzuna searches described above) is not implemented yet — see [CHANGELOG.md](CHANGELOG.md) and use on-demand discovery in the meantime.
+
+### Credential Helper (`scripts/job-vault.js`)
+
+A small Node CLI that stores per-company ATS/portal login credentials (e.g. Workday, Greenhouse accounts) in the macOS Keychain instead of anywhere in the repo or a plaintext file. `job-applicator` calls it to retrieve saved logins when filling out application forms.
+
+```
+node scripts/job-vault.js list
+node scripts/job-vault.js get "<Company Name>"
+node scripts/job-vault.js set "<Company Name>"
+node scripts/job-vault.js remove "<Company Name>"
+```
+
+Only a lookup index (company → Keychain service/account labels) is kept locally at `scripts/.job-vault-index.json`, which is gitignored. No passwords ever touch disk outside the Keychain.
 
 ### Coaching Tools (`coach-tools/`)
 
@@ -161,10 +172,10 @@ Some coaching tools and agents also include `.example.md` files with filled-in s
 ### 1. Install
 Open Claude Code and paste this repo URL:
 ```
-https://github.com/dfrysinger/ai-job-hunt-toolkit
+https://github.com/neversettledwanderer/ai-job-hunt-toolkit
 ```
 
-Tell Claude: "Clone this repo and set it up for me as a job hunting toolkit. Copy agents/ to ~/.claude/agents/, skills/ to ~/.claude/skills/, and create a new project folder at ~/job-hunt/ with the contents of templates/ and coach-tools/."
+Tell Claude: "Clone this repo and set it up for me as a job hunting toolkit. Copy agents/ to ~/.claude/agents/, skills/ to ~/.claude/skills/, and create a new project folder at ~/job-hunt/ with the contents of templates/ and coach-tools/, plus .job-discovery-config.example.yaml from the repo root."
 
 Claude Code loads agents and skills dynamically, so no restart is needed.
 
@@ -208,11 +219,15 @@ These scripts violate LinkedIn's Terms of Service. They are NOT enabled by defau
 
 The `contact-discovery` agent does NOT scrape LinkedIn. It opens search URLs in your browser for manual browsing and parses whatever you copy-paste into a scratchpad.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a running log of additions and changes.
+
 ## Credits
 
-Built by Daniel Frysinger during a 2026 job search using Claude Code.
+Originally built by [Daniel Frysinger](https://github.com/dfrysinger) during a 2026 job search using Claude Code — the toolkit represents months of iterative development, with each agent refined through hundreds of real job applications and the coaching frameworks developed through dozens of strategy sessions with the job-coach agent.
 
-This toolkit represents months of iterative development: each agent was refined through hundreds of real job applications, and the coaching frameworks were developed through dozens of strategy sessions with the job-coach agent.
+This fork adds the `job-finder-adzuna` agent (UK job boards), the `job-vault` Keychain credential helper, and additional security hardening for public distribution.
 
 ## License
 

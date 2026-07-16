@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased] - 2026-07-16
+
+### Security
+- Rewrote git history to permanently remove `supabase/.temp/*` (project ref, org ID, pooler connection string) that had been committed and then only deleted in a later commit, leaving it recoverable from history. Force-pushed the cleaned history to `main`.
+
+### Changed
+- `README.md`: corrected agent count (7 → 10 in the diagram, "Nine" → "Ten" in the components section), documented the `scripts/job-vault.js` credential helper, clarified that scheduled daily job discovery (`daily-job-discovery.ts`) is not yet implemented (on-demand discovery works today), fixed Quick Start to point at this fork and include the root-level `.job-discovery-config.example.yaml`, and added Changelog/fork-credits sections.
+
 ## [Unreleased] - 2026-07-15
 
 ### Added
