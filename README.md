@@ -7,7 +7,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 ```
                     +-----------------+
                     |   Claude Code   |
-                    |   (10 agents)   |
+                    |   (11 agents)   |
                     +--------+--------+
                              |
                     +--------v--------+
@@ -36,7 +36,7 @@ An AI-powered job hunting pipeline built on [Claude Code](https://claude.com/cla
 
 ### Agents (`agents/`)
 
-Ten specialized Claude Code agents, each with deep domain instructions:
+Eleven specialized Claude Code agents, each with deep domain instructions:
 
 | Agent | Purpose |
 |-------|---------|
@@ -46,6 +46,7 @@ Ten specialized Claude Code agents, each with deep domain instructions:
 | **job-finder-adzuna** | Search Adzuna API across UK job boards (Reed, TotalJobs, Guardian Jobs, CV-Library and more); add to pipeline |
 | **resume-optimizer** | Creates tailored resumes from job postings using a master bullet library |
 | **cover-letter-optimizer** | 4-phase pipeline: Briefing, Story Matching, Outline, Draft |
+| **application-reviewer** | Read-only, adversarial pre-submission review of the resume + cover letter package from a sceptical recruiter's perspective |
 | **job-applicator** | Fills out application forms via Playwright; supports Indeed Easy Apply & LinkedIn Apply |
 | **linkedin-outreach** | Drafts personalized LinkedIn messages using 9 relationship-based templates |
 | **contact-discovery** | Guides batch contact research sessions with LinkedIn |
@@ -66,7 +67,7 @@ job-coach detects untriaged jobs
     ↓
 Bulk triage: High/Medium/Low priority (5 min)
     ↓
-Execution workflow: Resume → Cover Letter → Apply
+Execution workflow: Resume → Cover Letter → Pre-Submission Review → Apply
 ```
 
 **Two discovery modes**:
@@ -79,6 +80,17 @@ Execution workflow: Resume → Cover Letter → Apply
 - Full deduplication across all sources
 
 **Setup**: During `setup-assistant`, configure Indeed API key, LinkedIn OAuth, and Adzuna credentials (free at https://developer.adzuna.com/), then copy `.job-discovery-config.example.yaml` to `~/job-hunt/.job-discovery-config.yaml` and fill in your target searches.
+
+### Application Gates
+
+`job-applicator` enforces two independent, mandatory gates before it will open a browser to submit anything. Both check the database directly regardless of what the coach believes the current state to be, and both can be overridden by typing SKIP — never silently; the override and its reason are always logged on the application record.
+
+1. **Networking gate** — blocks until contact research and outreach have at least started for the role. Applying cold, with zero prior contact, measurably performs worse than applying with any networking effort behind it.
+2. **Pre-submission review gate** — blocks until the `application-reviewer` agent has logged a passing review dated *after* the resume and cover letter were last modified. A review that passed before the most recent edit doesn't count, since edits introduce new errors as often as they fix old ones.
+
+`application-reviewer` itself is read-only: it never touches the documents. It extracts the actual file content (paragraphs, tables, headers/footers, metadata, tracked changes — not a summary from whichever agent built the file), cross-checks every claim against your master files, maps the job description's requirements line by line, and returns findings in three tiers — Must-fix (blocks submission), Interview-prep (a gap worth having an answer ready for), and Minor. Must-fix findings route back to `resume-optimizer` or `cover-letter-optimizer` to fix; the reviewer re-checks after.
+
+Full step-by-step sequencing lives in `coach-tools/execution-workflow.md`, which `job-coach` uses to derive "what's next" from database state. The two gates above are a second, independent safety net on top of that — so a request to apply directly, bypassing the coach, still can't skip networking or a passing review without an explicit, logged SKIP.
 
 ### MCP Server (`mcp-server/`)
 
