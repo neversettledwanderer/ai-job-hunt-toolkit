@@ -21,6 +21,7 @@ Thumbs.db
 
 # Temp files
 /tmp/
+supabase/.temp/
 
 # 1Password token (if cached locally)
 op-token.txt
