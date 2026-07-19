@@ -89,15 +89,25 @@ Between sessions, this is a blocker. Move to the next ranked job for new work. C
 
 **Not all jobs need cover letters.** the user decides per-job. Skip this step if not needed.
 
-### Step 7: Apply
+### Step 7: Pre-Submission Review
 
-**Trigger:** Application `status = ready`, resume reviewed, cover letter done (if needed).
+**Trigger:** Application `status = ready`, resume exists, cover letter done or not needed, and the application record's `notes` field has no `PRE-SUBMISSION REVIEW: PASS` line dated after the resume and cover letter files' last-modified time.
 
-**Who does it:** the user fills out the application. The job-applicator agent can help with Workday forms but is often too slow, so the user usually does this manually.
+**Who does it:** the application-reviewer agent. Read-only, adversarial review from a sceptical recruiter's perspective against the specific JD -- checks factual consistency against the master files, requirement coverage, structural red flags, and document integrity (metadata, tables, rendered layout). Findings route back to resume-optimizer or cover-letter-optimizer for fixes; the reviewer never edits anything itself.
+
+**Done when:** The reviewer appends a `PRE-SUBMISSION REVIEW [timestamp]: PASS - 0 Must-fix open` line to the application's `notes` field, and no Must-fix findings remain open.
+
+**If a review edits the resume or cover letter afterward:** the PASS is invalidated by definition (the file's mtime moves past the review timestamp). Re-run the reviewer before applying -- see `agents/application-reviewer.md` and the job-applicator agent's own gate, which checks this independently of coach state.
+
+### Step 8: Apply
+
+**Trigger:** Application `status = ready`, resume reviewed, cover letter done (if needed), and Step 7's review has passed.
+
+**Who does it:** the user fills out the application. The job-applicator agent can help with Workday forms but is often too slow, so the user usually does this manually. It independently re-checks the review verdict before proceeding, regardless of what the coach believes the state to be.
 
 **Done when:** Application `status = applied`, `applied_date` is set.
 
-### Step 8: Post-Apply Outreach (conditional)
+### Step 9: Post-Apply Outreach (conditional)
 
 **Trigger:** Application `status = applied` AND pre-apply networking did not result in a referral.
 
@@ -111,16 +121,17 @@ Between sessions, this is a blocker. Move to the next ranked job for new work. C
 
 For any ranked job, read these fields to determine the current step:
 
-| networking_status | contact_count | app status | resume_path | cover_letter | Current Step |
-|---|---|---|---|---|---|
-| not_started | 0 | none or draft | any | any | Step 1-2: Deep read + contact research |
-| researched | > 0 | any | any | any | Step 3: Send outreach |
-| outreach_in_progress | > 0 | any | any | any | Step 4: Blocked, waiting for replies |
-| done | any | draft | exists | any | Step 5: Review resume |
-| done | any | ready | exists | missing (needed) | Step 6: Cover letter |
-| done | any | ready | exists | exists or not needed | Step 7: Apply |
-| done | any | applied | exists | any | Step 8: Post-apply outreach (if no referral) |
-| done | any | applied | exists | any | Done (if referral landed) |
+| networking_status | contact_count | app status | resume_path | cover_letter | notes (latest review verdict) | Current Step |
+|---|---|---|---|---|---|---|
+| not_started | 0 | none or draft | any | any | any | Step 1-2: Deep read + contact research |
+| researched | > 0 | any | any | any | any | Step 3: Send outreach |
+| outreach_in_progress | > 0 | any | any | any | any | Step 4: Blocked, waiting for replies |
+| done | any | draft | exists | any | any | Step 5: Review resume |
+| done | any | ready | exists | missing (needed) | any | Step 6: Cover letter |
+| done | any | ready | exists | exists or not needed | no PASS, or PASS older than file mtimes | Step 7: Pre-submission review |
+| done | any | ready | exists | exists or not needed | PASS newer than file mtimes | Step 8: Apply |
+| done | any | applied | exists | any | any | Step 9: Post-apply outreach (if no referral) |
+| done | any | applied | exists | any | any | Done (if referral landed) |
 
 Walk the ranked list top to bottom. The first job whose current step is actionable (not blocked) is what the user should work on next.
 
@@ -135,5 +146,6 @@ Walk the ranked list top to bottom. The first job whose current step is actionab
 | Resume creation | Triggers agent | resume-optimizer generates | |
 | Resume review | Reviews + approves | resume-optimizer if changes needed | |
 | Cover letter | Answers questions, reviews | cover-letter-optimizer drafts | |
+| Pre-submission review | Resolves Must-fix findings | application-reviewer checks (read-only) | |
 | Application | Fills out form | job-applicator (Workday only, slow) | |
 | Post-apply outreach | Sends messages | linkedin-outreach drafts | |

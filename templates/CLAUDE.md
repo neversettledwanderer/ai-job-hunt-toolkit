@@ -44,11 +44,21 @@ Agent-specific instructions for specialized subagents live in `~/.claude/agents/
 - `resume-optimizer.md` - Creates tailored resumes from job postings
 - `job-applicator.md` - Fills out job application forms (Workday, Greenhouse, etc.)
 - `cover-letter-optimizer.md` - Creates tailored cover letters
+- `application-reviewer.md` - Read-only, adversarial pre-submission review of the resume + cover letter package from a sceptical recruiter's perspective
 - `linkedin-outreach.md` - Drafts LinkedIn outreach messages
 - `contact-discovery.md` - Guides batch contact research sessions and logs contacts to the database
 - `job-coach.md` - Career strategy coaching: positioning, targeting, pipeline analysis
 
 This file (CLAUDE.md) contains project-level context that applies to all conversations.
+
+## Application Gates
+
+The job-applicator agent enforces two independent, mandatory gates before it will open a browser to submit an application. Both check the database directly, regardless of what the coach believes the current state to be, and both can be overridden by the user typing SKIP (never silently -- the override and its reason are always logged on the application record).
+
+1. **Networking gate** -- checks `networking_status` on the job posting. Blocks until contact research and outreach have at least started (`researched` is not enough on its own; outreach needs to be underway or complete). Rationale: applying cold, with zero prior contact, measurably performs worse than applying with any networking effort behind it.
+2. **Pre-submission review gate** -- checks the application record's `notes` field for a `PRE-SUBMISSION REVIEW: PASS` verdict from the application-reviewer agent, dated after the resume and cover letter files were last modified. Blocks if no review has been run, if the last review found open Must-fix issues, or if either file was edited after the last passing review (edits introduce new errors as often as they fix old ones, so a stale PASS doesn't count). Rationale: the agents that build a resume and cover letter are optimizing for "does this cover the job description," which is a different mindset from "would a sceptical reader reject this, and why" -- a separate, adversarial read-through catches what a self-report from the builder agent doesn't.
+
+Full step-by-step sequencing (deep read, contact research, outreach, follow-up, resume, cover letter, pre-submission review, apply, post-apply outreach) lives in `coach-tools/execution-workflow.md`, which the job-coach agent uses to derive "what's next" from database state rather than a rigid fixed order. The two gates above exist as a second, independent safety net on top of that -- so a request to apply directly (bypassing the coach) still can't skip networking or a passing review without an explicit, logged SKIP.
 
 ## Project Structure
 

@@ -110,7 +110,7 @@ The coach owns two critical processes:
 
 **Triage:** When new jobs enter the pipeline, propose priority tiers (high/medium/low) and rank within tiers using the user's personal rubric. If no rubric has been established yet, initiate the rubric brainstorming exercise (see `coach-tools/triage-rubric.md`) before ranking anything. This is a required first-session activity.
 
-**Execution ordering:** When the user asks "what should I work on next?", follow the execution workflow in `coach-tools/execution-workflow.md`. It defines an 8-step state machine (deep read, contact research, outreach, follow-up, resume review, cover letter, apply, post-apply outreach) and a method for deriving the current step from DB fields. Walk the ranked list top-to-bottom, find the first unblocked job, and tell the user the next action.
+**Execution ordering:** When the user asks "what should I work on next?", follow the execution workflow in `coach-tools/execution-workflow.md`. It defines a 9-step state machine (deep read, contact research, outreach, follow-up, resume review, cover letter, pre-submission review, apply, post-apply outreach) and a method for deriving the current step from DB fields. Walk the ranked list top-to-bottom, find the first unblocked job, and tell the user the next action.
 
 **Session start habit:** Before any new work, check jobs at "outreach_in_progress" or "applied" for replies that need handling. This takes 2 minutes and prevents stale conversations.
 
