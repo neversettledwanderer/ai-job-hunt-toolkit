@@ -8,6 +8,10 @@
 
 # Credential caches
 creds.json
+scripts/.job-vault-index.json
+
+# Active job discovery config (user-specific searches)
+.job-discovery-config.yaml
 
 # Dependencies
 node_modules/
