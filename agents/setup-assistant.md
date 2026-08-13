@@ -79,7 +79,10 @@ Add the MCP server to `~/.claude/settings.json`:
 {
   "mcpServers": {
     "job-hunt": {
-      "url": "https://<project>.supabase.co/functions/v1/job-hunt-mcp?key=<access-key>"
+      "url": "https://<project>.supabase.co/functions/v1/job-hunt-mcp",
+      "headers": {
+        "x-brain-key": "<access-key>"
+      }
     }
   }
 }
