@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { buildUpdateApplicationLogs } from "./application-logs.ts";
-import { desktopFailure, desktopSuccess, registerDesktopTools } from "./desktop-tools.ts";
+import { desktopFailure, desktopSuccess, registerDesktopTools, runWithDesktopCorrelation } from "./desktop-tools.ts";
 import { isStaleWrite, validateApplicationTransition } from "./desktop-domain.ts";
 
 function requireEnv(name: string): string {
@@ -167,10 +167,7 @@ server.registerTool(
           .maybeSingle();
 
         if (lookupErr) {
-          return {
-            content: [{ type: "text" as const, text: `Company lookup failed: ${lookupErr.message}` }],
-            isError: true,
-          };
+          return desktopFailure("INTERNAL", "Company lookup failed while saving the posting.", true);
         }
 
         if (existing) {
@@ -184,10 +181,7 @@ server.registerTool(
             .single();
 
           if (createErr) {
-            return {
-              content: [{ type: "text" as const, text: `Failed to create company: ${createErr.message}` }],
-              isError: true,
-            };
+            return desktopFailure("INTERNAL", "The company could not be created.", true);
           }
           company_id = newCompany.id;
         }
@@ -225,10 +219,7 @@ server.registerTool(
           .select()
           .single();
         if (error) {
-          return {
-            content: [{ type: "text" as const, text: `Failed to create job posting: ${error.message}` }],
-            isError: true,
-          };
+          return desktopFailure(error.code === "23505" ? "CONFLICT" : "INTERNAL", error.code === "23505" ? "This posting is already saved." : "The posting could not be created.", error.code !== "23505");
         }
         data = inserted;
 
@@ -257,10 +248,7 @@ server.registerTool(
           .select()
           .single();
         if (error) {
-          return {
-            content: [{ type: "text" as const, text: `Failed to update job posting: ${error.message}` }],
-            isError: true,
-          };
+          return desktopFailure("INTERNAL", "The posting could not be updated.", true);
         }
         data = updated;
 
@@ -285,28 +273,25 @@ server.registerTool(
         }
       }
 
-      // Log attribution for new postings
-      if (isNewPosting) {
-        const { error: attrErr } = await supabase.from("attribution_log").insert({
-          entity_type: "job_posting",
-          entity_id: data.id,
-          action: "created",
-          actor: created_by,
-          reason: created_by_reason ?? null,
-        });
-        if (attrErr) console.error(`Attribution log failed: ${attrErr.message}`);
-      }
+      const { error: attrErr } = await supabase.from("attribution_log").insert({
+        entity_type: "job_posting",
+        entity_id: data.id,
+        action: isNewPosting ? "created" : "updated",
+        actor: created_by,
+        reason: created_by_reason ?? (isNewPosting ? "Posting created" : "Posting upserted"),
+      });
+      if (attrErr) return desktopFailure("INTERNAL", "The posting was saved but its attribution record could not be written.", true);
 
       const result = { job_posting: data };
-      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "add_job_posting", result });
+      if (idempotency_key) {
+        const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "add_job_posting", result });
+        if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The posting was saved but its retry record could not be written.", true);
+      }
       return desktopSuccess(result, `Upserted job posting: ${title ?? url}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[add_job_posting] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in add_job_posting: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure(message.startsWith("Invalid URL") ? "VALIDATION_FAILED" : "INTERNAL", message.startsWith("Invalid URL") ? message : "The posting could not be saved.", !message.startsWith("Invalid URL"));
     }
   }
 );
@@ -347,18 +332,12 @@ server.registerTool(
         .eq("job_posting_id", job_posting_id);
 
       if (lookupErr) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to check existing applications: ${lookupErr.message}` }],
-          isError: true,
-        };
+        return desktopFailure("INTERNAL", "Existing applications could not be checked.", true);
       }
 
       if (existing && existing.length > 0) {
         const ex = existing[0];
-        return {
-          content: [{ type: "text" as const, text: `Application already exists for this posting (id: ${ex.id}, status: ${ex.status}, created_by: ${ex.created_by}). Use update_application instead.` }],
-          isError: true,
-        };
+        return desktopFailure("CONFLICT", `Application already exists for this posting (id: ${ex.id}, status: ${ex.status}, created_by: ${ex.created_by}). Use update_application instead.`);
       }
 
       const { data, error } = await supabase
@@ -380,10 +359,7 @@ server.registerTool(
         .single();
 
       if (error) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to submit application: ${error.message}` }],
-          isError: true,
-        };
+        return desktopFailure(error.code === "23505" ? "CONFLICT" : "INTERNAL", error.code === "23505" ? "An application already exists for this posting." : "The application could not be created.", error.code !== "23505");
       }
 
       // Log attribution
@@ -415,18 +391,18 @@ server.registerTool(
         });
       }
       const { error: attrErr } = await supabase.from("attribution_log").insert(attributionLogs);
-      if (attrErr) console.error(`Attribution log failed: ${attrErr.message}`);
+      if (attrErr) return desktopFailure("INTERNAL", "The application was created but its attribution record could not be written.", true);
 
       const result = { application: data };
-      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "submit_application", result });
+      if (idempotency_key) {
+        const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "submit_application", result });
+        if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The application was created but its retry record could not be written.", true);
+      }
       return desktopSuccess(result, "Application recorded successfully");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[submit_application] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in submit_application: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure("INTERNAL", "The application could not be created.", true);
     }
   }
 );
@@ -494,10 +470,7 @@ server.registerTool(
       if (created_by !== undefined) updateFields.created_by = created_by;
 
       if (Object.keys(updateFields).length === 0) {
-        return {
-          content: [{ type: "text" as const, text: "No fields provided to update." }],
-          isError: true,
-        };
+        return desktopFailure("VALIDATION_FAILED", "No fields were provided to update.");
       }
 
       let updateQuery = supabase
@@ -520,22 +493,27 @@ server.registerTool(
           actor,
           actor_reason,
         );
-        if (logs.length > 0) {
-          const { error: attrErr } = await supabase.from("attribution_log").insert(logs);
-          if (attrErr) console.error(`Attribution log failed: ${attrErr.message}`);
-        }
+        if (logs.length === 0) logs.push({
+          entity_type: "application",
+          entity_id: application_id,
+          action: "updated",
+          actor,
+          reason: actor_reason ?? "Application fields updated",
+        });
+        const { error: attrErr } = await supabase.from("attribution_log").insert(logs);
+        if (attrErr) return desktopFailure("INTERNAL", "The application was updated but its attribution record could not be written.", true);
       }
 
       const result = { application: data };
-      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_application", result });
+      if (idempotency_key) {
+        const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_application", result });
+        if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The application was updated but its retry record could not be written.", true);
+      }
       return desktopSuccess(result, "Application updated successfully");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[update_application] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in update_application: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure("INTERNAL", "The application could not be updated.", true);
     }
   }
 );
@@ -760,10 +738,7 @@ server.registerTool(
         .select("status");
 
       if (appError) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to get applications: ${appError.message}` }],
-          isError: true,
-        };
+        return desktopFailure("INTERNAL", "Application counts could not be loaded.", true);
       }
 
       const statusCounts: Record<string, number> = {};
@@ -793,10 +768,7 @@ server.registerTool(
         .order("scheduled_at", { ascending: true });
 
       if (interviewError) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to get upcoming interviews: ${interviewError.message}` }],
-          isError: true,
-        };
+        return desktopFailure("INTERNAL", "Upcoming interviews could not be loaded.", true);
       }
 
       const result = {
@@ -806,16 +778,11 @@ server.registerTool(
         upcoming_interviews: upcomingInterviews ?? [],
       };
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
-      };
+      return desktopSuccess(result, "Pipeline overview loaded");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[get_pipeline_overview] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in get_pipeline_overview: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure("INTERNAL", "The pipeline overview could not be loaded.", true);
     }
   }
 );
@@ -854,22 +821,14 @@ server.registerTool(
         .order("scheduled_at", { ascending: true });
 
       if (error) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to get upcoming interviews: ${error.message}` }],
-          isError: true,
-        };
+        return desktopFailure("INTERNAL", "Upcoming interviews could not be loaded.", true);
       }
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ count: (data ?? []).length, interviews: data ?? [] }, null, 2) }],
-      };
+      return desktopSuccess({ count: (data ?? []).length, interviews: data ?? [] }, "Upcoming interviews loaded");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[get_upcoming_interviews] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in get_upcoming_interviews: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure("INTERNAL", "Upcoming interviews could not be loaded.", true);
     }
   }
 );
@@ -976,10 +935,7 @@ server.registerTool(
         .order("created_at", { ascending: false });
 
       if (error) {
-        return {
-          content: [{ type: "text" as const, text: `Search failed: ${error.message}` }],
-          isError: true,
-        };
+        return desktopFailure("INTERNAL", "Job postings could not be searched.", true);
       }
 
       let results = data ?? [];
@@ -998,10 +954,7 @@ server.registerTool(
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[search_job_postings] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in search_job_postings: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure(message.startsWith("Invalid URL") ? "VALIDATION_FAILED" : "INTERNAL", message.startsWith("Invalid URL") ? message : "Job postings could not be searched.", !message.startsWith("Invalid URL"));
     }
   }
 );
@@ -1602,9 +1555,7 @@ server.registerTool(
       if (triage_reason !== undefined && !needsRpc) updateFields.triage_reason = triage_reason;
 
       if (Object.keys(updateFields).length === 0 && !needsRpc) {
-        return {
-          content: [{ type: "text" as const, text: "No fields to update" }],
-        };
+        return desktopFailure("VALIDATION_FAILED", "No posting fields were provided to update.");
       }
 
       // Fetch current state for change detection in attribution logging
@@ -1626,10 +1577,7 @@ server.registerTool(
         const { data: updated, error } = await updateQuery.select("*, companies(name)").single();
 
         if (error) {
-          return {
-            content: [{ type: "text" as const, text: `Failed to update posting: ${error.message}` }],
-            isError: true,
-          };
+          return desktopFailure(expected_updated_at ? "STALE_WRITE" : "INTERNAL", expected_updated_at ? "The posting changed before the update completed." : "The posting could not be updated.", !expected_updated_at);
         }
         data = updated;
       } else {
@@ -1640,10 +1588,7 @@ server.registerTool(
           .eq("id", job_posting_id)
           .single();
         if (error) {
-          return {
-            content: [{ type: "text" as const, text: `Failed to fetch posting: ${error.message}` }],
-            isError: true,
-          };
+          return desktopFailure("INTERNAL", "The posting could not be loaded for update.", true);
         }
         data = fetched;
       }
@@ -1683,7 +1628,7 @@ server.registerTool(
             old_value: change.old_val,
             new_value: change.new_val,
           });
-          if (attrErr) console.error(`[update_job_posting] Attribution log error for ${change.field}: ${attrErr.message}`);
+          if (attrErr) return desktopFailure("INTERNAL", "The posting was updated but its attribution record could not be written.", true);
         }
 
         if (fieldChanges.length === 0) {
@@ -1694,7 +1639,7 @@ server.registerTool(
             actor: actor ?? "unknown",
             reason: actor_reason ?? "Fields updated",
           });
-          if (attrErr) console.error(`[update_job_posting] Attribution log error: ${attrErr.message}`);
+          if (attrErr) return desktopFailure("INTERNAL", "The posting was updated but its attribution record could not be written.", true);
         }
       }
 
@@ -1724,7 +1669,7 @@ server.registerTool(
             old_value: change.old_val,
             new_value: change.new_val,
           });
-          if (attrErr) console.error(`[update_job_posting] Attribution log error for ${change.field}: ${attrErr.message}`);
+          if (attrErr) return desktopFailure("INTERNAL", "The posting rank changed but its attribution record could not be written.", true);
         }
       }
 
@@ -1738,7 +1683,7 @@ server.registerTool(
           p_new_priority: toSentinel(priority),
           p_reason: toSentinel(triage_reason),
         };
-        if (expected_updated_at) rpcArguments.p_expected_updated_at = expected_updated_at;
+        if (expected_updated_at) rpcArguments.p_expected_updated_at = data.updated_at ?? expected_updated_at;
         const { error: rpcErr } = await supabase.rpc(expected_updated_at ? "set_triage_rank_desktop" : "set_triage_rank", rpcArguments);
         if (rpcErr) {
           if (expected_updated_at && ["40001", "PGRST116"].includes(rpcErr.code)) return desktopFailure("STALE_WRITE", "The posting changed before ranking completed. Refresh and compare before saving.");
@@ -1754,15 +1699,15 @@ server.registerTool(
       }
 
       const result = { job_posting: data };
-      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_job_posting", result });
+      if (idempotency_key) {
+        const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_job_posting", result });
+        if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The posting was updated but its retry record could not be written.", true);
+      }
       return desktopSuccess(result, `Updated posting: ${data.title ?? data.url}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[update_job_posting] Error:", err);
-      return {
-        content: [{ type: "text" as const, text: `Error in update_job_posting: ${message}` }],
-        isError: true,
-      };
+      return desktopFailure(message.startsWith("Invalid URL") ? "VALIDATION_FAILED" : "INTERNAL", message.startsWith("Invalid URL") ? message : "The posting could not be updated.", !message.startsWith("Invalid URL"));
     }
   }
 );
@@ -1864,9 +1809,15 @@ app.all("*", async (c) => {
     return c.json({ error: "Invalid or missing access key" }, 401);
   }
 
-  const transport = new StreamableHTTPTransport();
-  await server.connect(transport);
-  return transport.handleRequest(c);
+  const requestedCorrelationId = c.req.header("x-correlation-id");
+  const correlationId = requestedCorrelationId && /^[a-f0-9-]{36}$/i.test(requestedCorrelationId)
+    ? requestedCorrelationId
+    : crypto.randomUUID();
+  return runWithDesktopCorrelation(correlationId, async () => {
+    const transport = new StreamableHTTPTransport();
+    await server.connect(transport);
+    return transport.handleRequest(c);
+  });
 });
 
 Deno.serve(app.fetch);

@@ -40,3 +40,25 @@ export function reviewedAssetsMatch(
   return reviewedIds.length > 0 && reviewedIds.length === currentIds.length &&
     reviewedIds.every((id) => reviewedHashes[id] === currentHashes[id]);
 }
+
+export interface PackageAssetReference {
+  id: string;
+  asset_type: string;
+  relative_path: string;
+  content_hash: string;
+  validation_state: string;
+}
+
+export function selectAttachedPackageAssets(
+  resumePath: string | null | undefined,
+  coverLetterPath: string | null | undefined,
+  assets: PackageAssetReference[],
+): PackageAssetReference[] {
+  const resume = resumePath
+    ? assets.find((asset) => asset.asset_type === "resume" && asset.relative_path === resumePath)
+    : undefined;
+  const coverLetter = coverLetterPath
+    ? assets.find((asset) => asset.asset_type === "cover_letter" && asset.relative_path === coverLetterPath)
+    : undefined;
+  return [resume, coverLetter].filter((asset): asset is PackageAssetReference => Boolean(asset));
+}

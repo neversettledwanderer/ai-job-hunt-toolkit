@@ -1,9 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
-import { isStaleWrite, reviewedAssetsMatch } from "./desktop-domain.ts";
+import { isStaleWrite, reviewedAssetsMatch, selectAttachedPackageAssets } from "./desktop-domain.ts";
 
-export const DESKTOP_CONTRACT_VERSION = "1.1.0";
+export const DESKTOP_CONTRACT_VERSION = "1.2.0";
 
 type ErrorCode =
   | "AUTH_REQUIRED" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"
@@ -19,12 +20,18 @@ const desktopTools = [
   "save_desktop_interview", "complete_desktop_interview",
 ];
 
-function correlationId(): string {
-  return crypto.randomUUID();
+const correlationContext = new AsyncLocalStorage<string>();
+
+export function runWithDesktopCorrelation<T>(correlationId: string, operation: () => T): T {
+  return correlationContext.run(correlationId, operation);
+}
+
+export function currentDesktopCorrelationId(): string {
+  return correlationContext.getStore() ?? crypto.randomUUID();
 }
 
 export function desktopSuccess<T extends Record<string, unknown>>(data: T, message = "Operation completed") {
-  const envelope = { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId: correlationId(), data };
+  const envelope = { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId: currentDesktopCorrelationId(), data };
   return {
     content: [{ type: "text" as const, text: JSON.stringify({ success: true, message, ...data }, null, 2) }],
     structuredContent: envelope,
@@ -32,7 +39,7 @@ export function desktopSuccess<T extends Record<string, unknown>>(data: T, messa
 }
 
 export function desktopFailure(code: ErrorCode, message: string, retriable = false) {
-  const error = { code, message, retriable, correlationId: correlationId() };
+  const error = { code, message, retriable, correlationId: currentDesktopCorrelationId() };
   return {
     content: [{ type: "text" as const, text: JSON.stringify({ error }, null, 2) }],
     structuredContent: { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId: error.correlationId, error },
@@ -64,20 +71,21 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         if (appError || !application) return desktopFailure("NOT_FOUND", "Application not found.");
 
         const [{ data: assets, error: assetError }, { data: reviews, error: reviewError }, { data: overrides, error: overrideError }] = await Promise.all([
-          supabase.from("document_assets").select("id, asset_type, content_hash, validation_state").eq("application_id", application_id),
+          supabase.from("document_assets").select("id, asset_type, relative_path, content_hash, validation_state").eq("application_id", application_id),
           supabase.from("application_reviews").select("*").eq("application_id", application_id).order("reviewed_at", { ascending: false }).limit(1),
           supabase.from("gate_overrides").select("gate_ids").eq("application_id", application_id),
         ]);
         if (assetError || reviewError || overrideError) return desktopFailure("INTERNAL", "Readiness records could not be loaded.", true);
 
         const posting = Array.isArray(application.job_postings) ? application.job_postings[0] : application.job_postings;
-        const usableAssets = (assets ?? []).filter((asset) => asset.validation_state !== "invalid");
+        const packageAssets = selectAttachedPackageAssets(application.resume_path, application.cover_letter_path, assets ?? []);
+        const resumeAsset = packageAssets.find((asset) => asset.asset_type === "resume");
+        const coverLetterAsset = packageAssets.find((asset) => asset.asset_type === "cover_letter");
         const hasIndexedResume = (assets ?? []).some((asset) => asset.asset_type === "resume");
         const hasIndexedCoverLetter = (assets ?? []).some((asset) => asset.asset_type === "cover_letter");
-        const resumeExists = usableAssets.some((asset) => asset.asset_type === "resume") || (!hasIndexedResume && Boolean(application.resume_path));
-        const coverLetterExists = usableAssets.some((asset) => asset.asset_type === "cover_letter") || (!hasIndexedCoverLetter && Boolean(application.cover_letter_path));
+        const resumeExists = Boolean(resumeAsset && resumeAsset.validation_state !== "invalid") || (!hasIndexedResume && Boolean(application.resume_path));
+        const coverLetterExists = Boolean(coverLetterAsset && coverLetterAsset.validation_state !== "invalid") || (!hasIndexedCoverLetter && Boolean(application.cover_letter_path));
         const review = reviews?.[0];
-        const packageAssets = (assets ?? []).filter((asset) => ["resume", "cover_letter"].includes(asset.asset_type));
         const currentHashes = Object.fromEntries(packageAssets.map((asset) => [asset.id, asset.content_hash]));
         const reviewedHashes = review?.reviewed_asset_hashes && typeof review.reviewed_asset_hashes === "object"
           ? review.reviewed_asset_hashes as Record<string, string>
@@ -322,6 +330,7 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
       },
     },
     async ({ contact_id, expected_updated_at, idempotency_key, actor, ...fields }) => {
+      if (contact_id && !expected_updated_at) return desktopFailure("VALIDATION_FAILED", "An expected modification timestamp is required when updating a contact.");
       const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
       if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Contact save already completed");
       let contact;
@@ -340,10 +349,10 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         contact = data;
       }
       const result = { contact };
-      await Promise.all([
-        supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact.id, action: contact_id ? "updated" : "created", actor, reason: "Saved in desktop app" }),
-        supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "save_desktop_contact", result }),
-      ]);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact.id, action: contact_id ? "updated" : "created", actor, reason: "Saved in desktop app" });
+      if (attributionError) return desktopFailure("INTERNAL", "The contact was saved but its attribution record could not be written.", true);
+      const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "save_desktop_contact", result });
+      if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The contact was saved but its retry record could not be written.", true);
       return desktopSuccess(result, contact_id ? "Contact updated" : "Contact created");
     },
   );
@@ -352,14 +361,18 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     "delete_desktop_contact",
     {
       title: "Delete Desktop Contact", description: "Delete a contact and its posting links with attribution.",
-      inputSchema: { contact_id: z.string().uuid(), actor: z.string().min(1) },
+      inputSchema: { contact_id: z.string().uuid(), expected_updated_at: z.string().datetime(), actor: z.string().min(1) },
     },
-    async ({ contact_id, actor }) => {
-      const { data: current, error: findError } = await supabase.from("job_contacts").select("id, name").eq("id", contact_id).single();
+    async ({ contact_id, expected_updated_at, actor }) => {
+      const { data: current, error: findError } = await supabase.from("job_contacts").select("id, name, updated_at").eq("id", contact_id).single();
       if (findError || !current) return desktopFailure("NOT_FOUND", "Contact not found.");
-      const { error } = await supabase.from("job_contacts").delete().eq("id", contact_id);
-      if (error) return desktopFailure("INTERNAL", "Contact could not be deleted.", true);
-      await supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact_id, action: "deleted", actor, reason: `Deleted contact: ${current.name}` });
+      if (isStaleWrite(expected_updated_at, current.updated_at)) return desktopFailure("STALE_WRITE", "The contact changed after it was opened. Refresh before deleting.");
+      let deletion = supabase.from("job_contacts").delete().eq("id", contact_id);
+      if (expected_updated_at) deletion = deletion.eq("updated_at", expected_updated_at);
+      const { data: deleted, error } = await deletion.select("id").maybeSingle();
+      if (error || !deleted) return desktopFailure(expected_updated_at ? "STALE_WRITE" : "INTERNAL", expected_updated_at ? "The contact changed before deletion completed." : "Contact could not be deleted.", !expected_updated_at);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact_id, action: "deleted", actor, reason: `Deleted contact: ${current.name}` });
+      if (attributionError) return desktopFailure("INTERNAL", "The contact was deleted but its attribution record could not be written.", true);
       return desktopSuccess({ contactId: contact_id }, "Contact deleted");
     },
   );
@@ -380,7 +393,8 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         : supabase.from("posting_contacts").delete().eq("job_contact_id", contact_id).eq("job_posting_id", job_posting_id);
       const { error } = await operation;
       if (error) return desktopFailure("INTERNAL", linked ? "Contact could not be linked." : "Contact could not be unlinked.", true);
-      await supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact_id, action: linked ? "linked_to_posting" : "unlinked_from_posting", actor, reason: `Posting ${job_posting_id}` });
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "job_contact", entity_id: contact_id, action: linked ? "linked_to_posting" : "unlinked_from_posting", actor, reason: `Posting ${job_posting_id}` });
+      if (attributionError) return desktopFailure("INTERNAL", `The contact was ${linked ? "linked" : "unlinked"} but its attribution record could not be written.`, true);
       return desktopSuccess({ contactId: contact_id, postingId: job_posting_id, linked }, linked ? "Contact linked" : "Contact unlinked");
     },
   );
@@ -399,6 +413,7 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
       },
     },
     async ({ interview_id, expected_updated_at, idempotency_key, actor, ...fields }) => {
+      if (interview_id && !expected_updated_at) return desktopFailure("VALIDATION_FAILED", "An expected modification timestamp is required when updating an interview.");
       const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
       if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Interview save already completed");
       let interview;
@@ -417,10 +432,10 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         interview = data;
       }
       const result = { interview };
-      await Promise.all([
-        supabase.from("attribution_log").insert({ entity_type: "interview", entity_id: interview.id, action: interview_id ? "updated" : "created", actor, reason: "Saved in desktop app" }),
-        supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "save_desktop_interview", result }),
-      ]);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "interview", entity_id: interview.id, action: interview_id ? "updated" : "created", actor, reason: "Saved in desktop app" });
+      if (attributionError) return desktopFailure("INTERNAL", "The interview was saved but its attribution record could not be written.", true);
+      const { error: idempotencyError } = await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "save_desktop_interview", result });
+      if (idempotencyError && idempotencyError.code !== "23505") return desktopFailure("INTERNAL", "The interview was saved but its retry record could not be written.", true);
       return desktopSuccess(result, interview_id ? "Interview updated" : "Interview scheduled");
     },
   );
@@ -429,14 +444,15 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     "complete_desktop_interview",
     {
       title: "Complete Desktop Interview", description: "Mark an interview completed with optimistic concurrency and attribution.",
-      inputSchema: { interview_id: z.string().uuid(), expected_updated_at: z.string().datetime().optional(), actor: z.string().min(1) },
+      inputSchema: { interview_id: z.string().uuid(), expected_updated_at: z.string().datetime(), actor: z.string().min(1) },
     },
     async ({ interview_id, expected_updated_at, actor }) => {
       let update = supabase.from("interviews").update({ status: "completed" }).eq("id", interview_id);
       if (expected_updated_at) update = update.eq("updated_at", expected_updated_at);
       const { data, error } = await update.select().single();
       if (error || !data) return desktopFailure(expected_updated_at ? "STALE_WRITE" : "NOT_FOUND", expected_updated_at ? "The interview changed after it was opened." : "Interview not found.");
-      await supabase.from("attribution_log").insert({ entity_type: "interview", entity_id: interview_id, action: "completed", actor, reason: "Marked completed in desktop app" });
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "interview", entity_id: interview_id, action: "completed", actor, reason: "Marked completed in desktop app" });
+      if (attributionError) return desktopFailure("INTERNAL", "The interview was completed but its attribution record could not be written.", true);
       return desktopSuccess({ interview: data }, "Interview completed");
     },
   );

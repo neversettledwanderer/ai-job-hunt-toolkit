@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { isStaleWrite, reviewedAssetsMatch, validateApplicationTransition } from "../../supabase/functions/_shared/desktop-domain.ts";
+import { isStaleWrite, reviewedAssetsMatch, selectAttachedPackageAssets, validateApplicationTransition } from "../../supabase/functions/_shared/desktop-domain.ts";
+import { desktopSuccess, runWithDesktopCorrelation } from "../../supabase/functions/_shared/desktop-tools.ts";
 
 Deno.test("validates controlled application transitions", () => {
   assertEquals(validateApplicationTransition("draft", "ready", null), null);
@@ -20,4 +21,25 @@ Deno.test("invalidates a review when any package asset changes or is added", () 
   assertEquals(reviewedAssetsMatch({ resume: "hash-a" }, { resume: "hash-b" }), false);
   assertEquals(reviewedAssetsMatch({ resume: "hash-a" }, { resume: "hash-a", cover: "hash-c" }), false);
   assertEquals(reviewedAssetsMatch({}, {}), false);
+});
+
+Deno.test("selects only the exact resume and cover letter attached to the application", () => {
+  const assets = [
+    { id: "old", asset_type: "resume", relative_path: "Generated/old.docx", content_hash: "old-hash", validation_state: "valid" },
+    { id: "current", asset_type: "resume", relative_path: "Generated/current.docx", content_hash: "current-hash", validation_state: "valid" },
+    { id: "cover", asset_type: "cover_letter", relative_path: "Generated/cover.docx", content_hash: "cover-hash", validation_state: "valid" },
+  ];
+  assertEquals(selectAttachedPackageAssets("Generated/current.docx", null, assets).map((asset) => asset.id), ["current"]);
+  assertEquals(selectAttachedPackageAssets("Generated/current.docx", "Generated/cover.docx", assets).map((asset) => asset.id), ["current", "cover"]);
+  assertEquals(selectAttachedPackageAssets(null, null, assets), []);
+});
+
+Deno.test("preserves a request correlation id through asynchronous tool work", async () => {
+  const correlationId = "123e4567-e89b-42d3-a456-426614174000";
+  const result = await runWithDesktopCorrelation(correlationId, async () => {
+    await Promise.resolve();
+    return desktopSuccess({ ok: true });
+  });
+  assertEquals((result.structuredContent as { correlationId: string }).correlationId, correlationId);
+  assertEquals(result.content[0].text.includes('"ok": true'), true);
 });
