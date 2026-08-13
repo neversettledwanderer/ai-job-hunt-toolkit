@@ -6,6 +6,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { buildUpdateApplicationLogs } from "./handlers.ts";
+import { desktopFailure, desktopSuccess, registerDesktopTools } from "../_shared/desktop-tools.ts";
+import { isStaleWrite, validateApplicationTransition } from "../_shared/desktop-domain.ts";
 
 function requireEnv(name: string): string {
     const value = Deno.env.get(name);
@@ -61,6 +63,8 @@ const server = new McpServer({
   name: "job-hunt",
   version: "1.0.0",
 });
+
+registerDesktopTools(server, supabase);
 
 // Tool 1: add_company
 server.registerTool(
@@ -141,10 +145,15 @@ server.registerTool(
       closing_date: z.string().optional().describe("Posting closing date (YYYY-MM-DD)"),
       created_by: z.string().describe("Identifier for who/what created this entry (e.g. 'resume-optimizer', 'job-applicator', 'claude-code')"),
       created_by_reason: z.string().optional().describe("Why this posting was created (e.g., 'LinkedIn URL shared in Slack channel')"),
+      idempotency_key: z.string().uuid().optional().describe("Retry-safe desktop mutation identifier"),
     },
   },
-  async ({ url: rawUrl, company_name, title, location, source, salary_min, salary_max, notes, posted_date, priority, salary_currency, closing_date, created_by, created_by_reason, triage_rank, triage_reason }) => {
+  async ({ url: rawUrl, company_name, title, location, source, salary_min, salary_max, notes, posted_date, priority, salary_currency, closing_date, created_by, created_by_reason, triage_rank, triage_reason, idempotency_key }) => {
     try {
+      if (idempotency_key) {
+        const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
+        if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Posting save already completed");
+      }
       const url = normalizeUrl(rawUrl);
       let company_id: string | null = null;
 
@@ -288,9 +297,9 @@ server.registerTool(
         if (attrErr) console.error(`Attribution log failed: ${attrErr.message}`);
       }
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: `Upserted job posting: ${title ?? url}`, job_posting: data }, null, 2) }],
-      };
+      const result = { job_posting: data };
+      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "add_job_posting", result });
+      return desktopSuccess(result, `Upserted job posting: ${title ?? url}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[add_job_posting] Error:", err);
@@ -321,10 +330,16 @@ server.registerTool(
       response_date: z.string().optional().describe("Date company responded (YYYY-MM-DD)"),
       created_by: z.string().describe("Identifier for who/what created this entry (e.g. 'resume-optimizer', 'job-applicator', 'claude-code')"),
       created_by_reason: z.string().optional().describe("Why this application was created"),
+      idempotency_key: z.string().uuid().optional().describe("Retry-safe desktop mutation identifier"),
     },
   },
-  async ({ job_posting_id, status, applied_date, resume_version, cover_letter_notes, referral_contact, notes, resume_path, cover_letter_path, response_date, created_by, created_by_reason }) => {
+  async ({ job_posting_id, status, applied_date, resume_version, cover_letter_notes, referral_contact, notes, resume_path, cover_letter_path, response_date, created_by, created_by_reason, idempotency_key }) => {
     try {
+      if (idempotency_key) {
+        const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
+        if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Application creation already completed");
+      }
+      if (status === "applied" && !applied_date) return desktopFailure("VALIDATION_FAILED", "An applied date is required when creating an applied application.");
       // Guard: reject if an application already exists for this posting
       const { data: existing, error: lookupErr } = await supabase
         .from("applications")
@@ -402,9 +417,9 @@ server.registerTool(
       const { error: attrErr } = await supabase.from("attribution_log").insert(attributionLogs);
       if (attrErr) console.error(`Attribution log failed: ${attrErr.message}`);
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: "Application recorded successfully", application: data }, null, 2) }],
-      };
+      const result = { application: data };
+      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "submit_application", result });
+      return desktopSuccess(result, "Application recorded successfully");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[submit_application] Error:", err);
@@ -429,6 +444,7 @@ server.registerTool(
       resume_version: z.string().nullable().optional().describe("Resume version used. Pass null to clear."),
       resume_path: z.string().nullable().optional().describe("Path to generated resume file. Pass null to clear."),
       cover_letter_path: z.string().nullable().optional().describe("Path to cover letter file. Pass null to clear."),
+      cover_letter_required: z.boolean().optional().describe("Whether this application requires a cover letter."),
       cover_letter_notes: z.string().nullable().optional().describe("Notes about cover letter. Pass null to clear."),
       referral_contact: z.string().nullable().optional().describe("Referral contact name. Pass null to clear."),
       response_date: z.string().nullable().optional().describe("Date company responded (YYYY-MM-DD). Pass null to clear."),
@@ -436,17 +452,33 @@ server.registerTool(
       actor: z.string().describe("Identifier for who/what is making this update (e.g. 'resume-optimizer', 'job-applicator', 'claude-code')"),
       actor_reason: z.string().optional().describe("Why this update is being made"),
       created_by: z.string().optional().describe("Override who created this application (for corrections)"),
+      expected_updated_at: z.string().datetime().optional().describe("Reject the write if the record changed after this timestamp"),
+      idempotency_key: z.string().uuid().optional().describe("Retry-safe desktop mutation identifier"),
     },
   },
-  async ({ application_id, status, applied_date, resume_version, resume_path, cover_letter_path, cover_letter_notes, referral_contact, response_date, notes, actor, actor_reason, created_by }) => {
+  async ({ application_id, status, applied_date, resume_version, resume_path, cover_letter_path, cover_letter_required, cover_letter_notes, referral_contact, response_date, notes, actor, actor_reason, created_by, expected_updated_at, idempotency_key }) => {
     try {
+      if (idempotency_key) {
+        const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
+        if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Application update already completed");
+      }
       // Fetch current state for change detection
       const { data: current, error: currentErr } = await supabase
         .from("applications")
-        .select("status, resume_path, cover_letter_path")
+        .select("status, applied_date, resume_path, cover_letter_path, cover_letter_required, updated_at")
         .eq("id", application_id)
         .single();
-      if (currentErr) console.error(`Failed to fetch current application state: ${currentErr.message}`);
+      if (currentErr || !current) return desktopFailure("NOT_FOUND", "Application not found.");
+      if (isStaleWrite(expected_updated_at, current.updated_at)) {
+        return desktopFailure("STALE_WRITE", "The application changed after it was opened. Refresh and compare before saving.");
+      }
+      if (status !== undefined) {
+        const transitionError = validateApplicationTransition(current.status, status, applied_date === undefined ? current.applied_date : applied_date);
+        if (transitionError) return desktopFailure("VALIDATION_FAILED", transitionError);
+      }
+      if (status === undefined && current.status === "applied" && applied_date === null) {
+        return desktopFailure("VALIDATION_FAILED", "The applied date cannot be cleared while the application is applied.");
+      }
 
       const updateFields: Record<string, unknown> = {};
       if (status !== undefined) updateFields.status = status;
@@ -454,6 +486,7 @@ server.registerTool(
       if (resume_version !== undefined) updateFields.resume_version = resume_version;
       if (resume_path !== undefined) updateFields.resume_path = resume_path;
       if (cover_letter_path !== undefined) updateFields.cover_letter_path = cover_letter_path;
+      if (cover_letter_required !== undefined) updateFields.cover_letter_required = cover_letter_required;
       if (cover_letter_notes !== undefined) updateFields.cover_letter_notes = cover_letter_notes;
       if (referral_contact !== undefined) updateFields.referral_contact = referral_contact;
       if (response_date !== undefined) updateFields.response_date = response_date;
@@ -467,25 +500,22 @@ server.registerTool(
         };
       }
 
-      const { data, error } = await supabase
+      let updateQuery = supabase
         .from("applications")
         .update(updateFields)
-        .eq("id", application_id)
-        .select()
-        .single();
+        .eq("id", application_id);
+      if (expected_updated_at) updateQuery = updateQuery.eq("updated_at", expected_updated_at);
+      const { data, error } = await updateQuery.select().single();
 
       if (error) {
-        return {
-          content: [{ type: "text" as const, text: `Failed to update application: ${error.message}` }],
-          isError: true,
-        };
+        return desktopFailure(expected_updated_at ? "STALE_WRITE" : "INTERNAL", expected_updated_at ? "The application changed before the update completed." : `Failed to update application: ${error.message}`, !expected_updated_at);
       }
 
       // Log attribution for changes
       if (current) {
         const logs = buildUpdateApplicationLogs(
           current,
-          { status, resume_path, cover_letter_path },
+          { status, resume_path, cover_letter_path, cover_letter_required },
           application_id,
           actor,
           actor_reason,
@@ -496,9 +526,9 @@ server.registerTool(
         }
       }
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: "Application updated successfully", application: data }, null, 2) }],
-      };
+      const result = { application: data };
+      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_application", result });
+      return desktopSuccess(result, "Application updated successfully");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[update_application] Error:", err);
@@ -865,9 +895,11 @@ server.registerTool(
       applied_after: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Application submitted on or after (YYYY-MM-DD)"),
       applied_before: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Application submitted on or before (YYYY-MM-DD)"),
       posting_status: z.enum(["active", "closed"]).optional().describe("Filter by posting status (active or closed)"),
+      limit: z.number().int().min(1).max(200).optional().describe("Maximum page size for desktop clients; omitted preserves the legacy unpaged response"),
+      cursor: z.string().regex(/^\d+$/).optional().describe("Opaque numeric offset returned by the previous page"),
     },
   },
-  async ({ query, status, source, url, priority, has_application, created_by, created_after, created_before, posted_after, posted_before, applied_after, applied_before, posting_status }) => {
+  async ({ query, status, source, url, priority, has_application, created_by, created_after, created_before, posted_after, posted_before, applied_after, applied_before, posting_status, limit, cursor }) => {
     try {
       // Build select — inner join when filtering by application fields
       const needsInnerJoin = !!status || !!applied_after || !!applied_before;
@@ -875,14 +907,14 @@ server.registerTool(
       if (needsInnerJoin) {
         q = supabase
           .from("job_postings")
-          .select("*, companies(name), applications!inner(id, status, applied_date, resume_path, cover_letter_path, created_by)");
+          .select("*, companies(name), applications!inner(id, job_posting_id, status, applied_date, response_date, resume_path, cover_letter_path, cover_letter_required, notes, created_by, updated_at)");
         if (status) q = q.eq("applications.status", status);
         if (applied_after) q = q.gte("applications.applied_date", applied_after);
         if (applied_before) q = q.lte("applications.applied_date", applied_before);
       } else {
         q = supabase
           .from("job_postings")
-          .select("*, companies(name), applications(id, status, applied_date, resume_path, cover_letter_path, created_by)");
+          .select("*, companies(name), applications(id, job_posting_id, status, applied_date, response_date, resume_path, cover_letter_path, cover_letter_required, notes, created_by, updated_at)");
       }
 
       if (url) {
@@ -958,9 +990,10 @@ server.registerTool(
         results = results.filter((p: any) => !p.applications || p.applications.length === 0);
       }
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ count: results.length, job_postings: results }, null, 2) }],
-      };
+      const offset = Number(cursor ?? 0);
+      const page = limit === undefined ? results : results.slice(offset, offset + limit);
+      const nextCursor = limit !== undefined && offset + page.length < results.length ? String(offset + page.length) : null;
+      return desktopSuccess({ count: results.length, job_postings: page, nextCursor }, "Posting search completed");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[search_job_postings] Error:", err);
@@ -1530,10 +1563,16 @@ server.registerTool(
       status: z.enum(["active", "closed"]).optional().describe("Posting status (active or closed)"),
       triage_rank: z.number().int().min(1).nullable().optional().describe("Stack rank within priority tier (1 = highest). Set null to clear rank. Triggers auto-renumber."),
       triage_reason: z.string().nullable().optional().describe("Why this posting has this rank. Can exist without a rank as a historical note."),
+      expected_updated_at: z.string().datetime().optional().describe("Reject the write if the record changed after this timestamp"),
+      idempotency_key: z.string().uuid().optional().describe("Retry-safe desktop mutation identifier"),
     },
   },
-  async ({ job_posting_id, actor, actor_reason, networking_status, has_network_connections, priority, title, url, location, source, salary_min, salary_max, salary_currency, notes, posted_date, closing_date, status, triage_rank, triage_reason }) => {
+  async ({ job_posting_id, actor, actor_reason, networking_status, has_network_connections, priority, title, url, location, source, salary_min, salary_max, salary_currency, notes, posted_date, closing_date, status, triage_rank, triage_reason, expected_updated_at, idempotency_key }) => {
     try {
+      if (idempotency_key) {
+        const { data: prior } = await supabase.from("mutation_idempotency").select("result").eq("idempotency_key", idempotency_key).maybeSingle();
+        if (prior?.result) return desktopSuccess(prior.result as Record<string, unknown>, "Posting update already completed");
+      }
       // Sentinel mapping for string-typed RPC params: undefined=keep current (SQL NULL), null=clear (SQL ''), value=set
       // Only use for p_new_priority and p_reason (string params), NOT p_new_rank (integer param)
       const toSentinel = (v: unknown): string | null =>
@@ -1570,19 +1609,20 @@ server.registerTool(
       // Fetch current state for change detection in attribution logging
       const { data: current, error: currentErr } = await supabase
         .from("job_postings")
-        .select("networking_status, has_network_connections, priority, title, status, url, location, source, salary_min, salary_max, salary_currency, notes, posted_date, closing_date, triage_rank, triage_reason")
+        .select("networking_status, has_network_connections, priority, title, status, url, location, source, salary_min, salary_max, salary_currency, notes, posted_date, closing_date, triage_rank, triage_reason, updated_at")
         .eq("id", job_posting_id)
         .single();
-      if (currentErr) console.error(`Failed to fetch current posting state: ${currentErr.message}`);
+      if (currentErr || !current) return desktopFailure("NOT_FOUND", "Job posting not found.");
+      if (isStaleWrite(expected_updated_at, current.updated_at)) return desktopFailure("STALE_WRITE", "The posting changed after it was opened. Refresh and compare before saving.");
 
       let data: Record<string, unknown>;
       if (Object.keys(updateFields).length > 0) {
-        const { data: updated, error } = await supabase
+        let updateQuery = supabase
           .from("job_postings")
           .update(updateFields)
-          .eq("id", job_posting_id)
-          .select("*, companies(name)")
-          .single();
+          .eq("id", job_posting_id);
+        if (expected_updated_at) updateQuery = updateQuery.eq("updated_at", expected_updated_at);
+        const { data: updated, error } = await updateQuery.select("*, companies(name)").single();
 
         if (error) {
           return {
@@ -1691,17 +1731,17 @@ server.registerTool(
       // RPC errors are fatal here (unlike add_job_posting where a missing rank is the default state)
       if (needsRpc) {
         const effectiveRank = priority === null ? null : (triageRankProvided ? (triage_rank ?? null) : null);
-        const { error: rpcErr } = await supabase.rpc("set_triage_rank", {
+        const rpcArguments: Record<string, unknown> = {
           p_posting_id: job_posting_id,
           p_new_rank: effectiveRank,
           p_new_priority: toSentinel(priority),
           p_reason: toSentinel(triage_reason),
-        });
+        };
+        if (expected_updated_at) rpcArguments.p_expected_updated_at = expected_updated_at;
+        const { error: rpcErr } = await supabase.rpc(expected_updated_at ? "set_triage_rank_desktop" : "set_triage_rank", rpcArguments);
         if (rpcErr) {
-          return {
-            content: [{ type: "text" as const, text: `Posting updated but rank operation failed: ${rpcErr.message}` }],
-            isError: true,
-          };
+          if (expected_updated_at && ["40001", "PGRST116"].includes(rpcErr.code)) return desktopFailure("STALE_WRITE", "The posting changed before ranking completed. Refresh and compare before saving.");
+          return desktopFailure("INTERNAL", `Rank operation failed: ${rpcErr.message}`, true);
         }
         // Re-fetch to get post-RPC state (rank, priority, reason may have changed)
         const { data: refreshed, error: refreshErr } = await supabase
@@ -1712,9 +1752,9 @@ server.registerTool(
         if (!refreshErr && refreshed) data = refreshed;
       }
 
-      return {
-        content: [{ type: "text" as const, text: JSON.stringify({ success: true, message: `Updated posting: ${data.title ?? data.url}`, job_posting: data }, null, 2) }],
-      };
+      const result = { job_posting: data };
+      if (idempotency_key) await supabase.from("mutation_idempotency").insert({ idempotency_key, operation: "update_job_posting", result });
+      return desktopSuccess(result, `Updated posting: ${data.title ?? data.url}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[update_job_posting] Error:", err);
@@ -1791,7 +1831,7 @@ server.registerTool(
       // Group by status for summary
       const statusCounts: Record<string, number> = {};
       for (const p of results) {
-        const s = (p.networking_status as string) ?? "not_started";
+        const s = ((p as Record<string, unknown>).networking_status as string) ?? "not_started";
         statusCounts[s] = (statusCounts[s] || 0) + 1;
       }
 

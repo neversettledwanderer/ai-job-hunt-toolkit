@@ -102,6 +102,21 @@ A Supabase Edge Function that exposes job pipeline tools via the Model Context P
 - Maintain an attribution log (who/what created or changed each record)
 - Stack-rank postings within priority tiers
 
+#### Desktop MCP contract
+
+The separate `ai_job_hunt_desktop_app` repository uses this MCP server as its
+only database boundary. Migration
+`supabase/migrations/202608130001_desktop_mvp.sql` adds the personal desktop
+records, optimistic-concurrency timestamps, one-application-per-posting
+constraint, exact document hashes, independent reviews, explicit gate
+overrides, run events, and idempotency storage without renaming legacy fields.
+
+Both the local MCP entrypoint and Supabase Edge Function register the shared
+desktop handlers in `supabase/functions/_shared/`. Existing tool names and
+arguments remain available; desktop-aware responses additionally return a
+versioned `structuredContent` envelope. Apply the migration before deploying
+the function, then verify `get_desktop_capabilities` reports contract `1.0.0`.
+
 ### Scheduled Automations (`extension/`)
 
 Deno scripts triggered by macOS launchd on a schedule:

@@ -21,11 +21,13 @@ export function buildUpdateApplicationLogs(
     status: string;
     resume_path: string | null;
     cover_letter_path: string | null;
+    cover_letter_required?: boolean;
   },
   updates: {
     status?: string;
     resume_path?: string | null;
     cover_letter_path?: string | null;
+    cover_letter_required?: boolean;
   },
   application_id: string,
   actor: string,
@@ -78,6 +80,21 @@ export function buildUpdateApplicationLogs(
       reason: actor_reason ?? null,
       old_value: current.cover_letter_path ?? null,
       new_value: updates.cover_letter_path ?? null,
+    });
+  }
+
+  if (
+    updates.cover_letter_required !== undefined &&
+    updates.cover_letter_required !== current.cover_letter_required
+  ) {
+    logs.push({
+      entity_type: "application",
+      entity_id: application_id,
+      action: "cover_letter_requirement_changed",
+      actor,
+      reason: actor_reason ?? null,
+      old_value: String(current.cover_letter_required ?? false),
+      new_value: String(updates.cover_letter_required),
     });
   }
 
