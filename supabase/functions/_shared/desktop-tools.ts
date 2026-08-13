@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { isStaleWrite } from "./desktop-domain.ts";
+import { isStaleWrite, reviewedAssetsMatch } from "./desktop-domain.ts";
 
-export const DESKTOP_CONTRACT_VERSION = "1.0.0";
+export const DESKTOP_CONTRACT_VERSION = "1.1.0";
 
 type ErrorCode =
   | "AUTH_REQUIRED" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"
@@ -14,6 +14,7 @@ const desktopTools = [
   "register_document_asset", "create_agent_run", "append_agent_run_event",
   "update_agent_run", "record_application_review", "record_gate_override",
   "reconcile_incomplete_agent_runs", "list_desktop_activity",
+  "get_latest_application_review", "list_desktop_contacts", "list_desktop_interviews",
   "save_desktop_contact", "delete_desktop_contact", "set_desktop_contact_link",
   "save_desktop_interview", "complete_desktop_interview",
 ];
@@ -76,12 +77,12 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         const resumeExists = usableAssets.some((asset) => asset.asset_type === "resume") || (!hasIndexedResume && Boolean(application.resume_path));
         const coverLetterExists = usableAssets.some((asset) => asset.asset_type === "cover_letter") || (!hasIndexedCoverLetter && Boolean(application.cover_letter_path));
         const review = reviews?.[0];
-        const currentHashes = Object.fromEntries((assets ?? []).map((asset) => [asset.id, asset.content_hash]));
+        const packageAssets = (assets ?? []).filter((asset) => ["resume", "cover_letter"].includes(asset.asset_type));
+        const currentHashes = Object.fromEntries(packageAssets.map((asset) => [asset.id, asset.content_hash]));
         const reviewedHashes = review?.reviewed_asset_hashes && typeof review.reviewed_asset_hashes === "object"
           ? review.reviewed_asset_hashes as Record<string, string>
           : {};
-        const reviewFresh = Boolean(review) && Object.keys(reviewedHashes).length > 0 &&
-          Object.entries(reviewedHashes).every(([id, hash]) => currentHashes[id] === hash);
+        const reviewFresh = Boolean(review) && reviewedAssetsMatch(reviewedHashes, currentHashes);
 
         const overridden = new Set((overrides ?? []).flatMap((item) => item.gate_ids ?? []));
         const gates = [
@@ -148,7 +149,12 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     async (input) => {
       const row = { ...input, id: input.id ?? crypto.randomUUID() };
       const { data, error } = await supabase.from("document_assets").upsert(row, { onConflict: "relative_path" }).select().single();
-      return error ? desktopFailure("INTERNAL", "Document asset could not be registered.", true) : desktopSuccess({ asset: data }, "Document registered");
+      if (error) return desktopFailure("INTERNAL", "Document asset could not be registered.", true);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({
+        entity_type: "document_asset", entity_id: data.id, action: "registered",
+        actor: input.created_by, reason: `Registered ${input.asset_type}`,
+      });
+      return attributionError ? desktopFailure("INTERNAL", "Document registered but attribution could not be recorded.", true) : desktopSuccess({ asset: data }, "Document registered");
     },
   );
 
@@ -164,7 +170,9 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     },
     async ({ run_id, workflow, entity_type, entity_id }) => {
       const { data, error } = await supabase.from("agent_runs").insert({ id: run_id, workflow, entity_type, entity_id: entity_id ?? null, status: "queued" }).select().single();
-      return error ? desktopFailure("INTERNAL", "Agent run could not be created.", true) : desktopSuccess({ run: data }, "Run created");
+      if (error) return desktopFailure("INTERNAL", "Agent run could not be created.", true);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "agent_run", entity_id: run_id, action: "created", actor: "desktop-agent", reason: `Started ${workflow}` });
+      return attributionError ? desktopFailure("INTERNAL", "Run created but attribution could not be recorded.", true) : desktopSuccess({ run: data }, "Run created");
     },
   );
 
@@ -222,6 +230,54 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
         if (error) return desktopFailure("INTERNAL", "Incomplete runs could not be reconciled.", true);
       }
       return desktopSuccess({ interruptedRunIds: ids }, ids.length ? "Incomplete runs marked interrupted" : "No incomplete runs");
+    },
+  );
+
+  server.registerTool(
+    "get_latest_application_review",
+    {
+      title: "Latest Application Review",
+      description: "Return the latest structured review for one application without document contents.",
+      inputSchema: { application_id: z.string().uuid() },
+    },
+    async ({ application_id }) => {
+      const { data, error } = await supabase.from("application_reviews").select("*").eq("application_id", application_id).order("reviewed_at", { ascending: false }).limit(1).maybeSingle();
+      return error ? desktopFailure("INTERNAL", "Application review could not be loaded.", true) : desktopSuccess({ review: data ?? null });
+    },
+  );
+
+  server.registerTool(
+    "list_desktop_contacts",
+    {
+      title: "List Desktop Contacts",
+      description: "List contacts with their posting relationships for desktop contact management.",
+      inputSchema: { query: z.string().max(200).optional(), limit: z.number().int().min(1).max(200).default(100) },
+    },
+    async ({ query, limit }) => {
+      let request = supabase.from("job_contacts")
+        .select("*, companies(name), posting_contacts(job_posting_id, relationship, job_postings(id, title, companies(name)))")
+        .order("created_at", { ascending: false }).limit(limit);
+      if (query) {
+        const safeQuery = query.replace(/[%_.,()\\]/g, "\\$&");
+        request = request.or(`name.ilike.%${safeQuery}%,title.ilike.%${safeQuery}%,notes.ilike.%${safeQuery}%`);
+      }
+      const { data, error } = await request;
+      return error ? desktopFailure("INTERNAL", "Contacts could not be loaded.", true) : desktopSuccess({ contacts: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "list_desktop_interviews",
+    {
+      title: "List Desktop Interviews",
+      description: "List upcoming and historical interviews with application and posting context.",
+      inputSchema: { limit: z.number().int().min(1).max(200).default(100) },
+    },
+    async ({ limit }) => {
+      const { data, error } = await supabase.from("interviews")
+        .select("*, applications(id, job_posting_id, job_postings(id, title, companies(name)))")
+        .order("scheduled_at", { ascending: false, nullsFirst: false }).limit(limit);
+      return error ? desktopFailure("INTERNAL", "Interviews could not be loaded.", true) : desktopSuccess({ interviews: data ?? [] });
     },
   );
 
@@ -399,7 +455,9 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     },
     async (input) => {
       const { data, error } = await supabase.from("application_reviews").insert(input).select().single();
-      return error ? desktopFailure("INTERNAL", "Application review could not be recorded.", true) : desktopSuccess({ review: data }, "Review recorded");
+      if (error) return desktopFailure("INTERNAL", "Application review could not be recorded.", true);
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "application_review", entity_id: data.id, action: `review_${input.result}`, actor: `desktop-agent:${input.reviewer_run_id ?? "review"}`, reason: input.safe_summary ?? "Application reviewed" });
+      return attributionError ? desktopFailure("INTERNAL", "Review recorded but attribution could not be recorded.", true) : desktopSuccess({ review: data }, "Review recorded");
     },
   );
 
@@ -416,8 +474,8 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     async (input) => {
       const { data, error } = await supabase.from("gate_overrides").insert(input).select().single();
       if (error) return desktopFailure("INTERNAL", "Gate override could not be recorded.", true);
-      await supabase.from("attribution_log").insert({ entity_type: "application", entity_id: input.application_id, action: "gate_overridden", actor: input.actor, reason: input.reason });
-      return desktopSuccess({ override: data }, "Override recorded");
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "gate_override", entity_id: data.id, action: "gate_overridden", actor: input.actor, reason: input.reason });
+      return attributionError ? desktopFailure("INTERNAL", "Override recorded but attribution could not be recorded.", true) : desktopSuccess({ override: data }, "Override recorded");
     },
   );
 }

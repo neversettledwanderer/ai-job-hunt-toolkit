@@ -174,6 +174,26 @@ CREATE TABLE IF NOT EXISTS mutation_idempotency (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE attribution_log DROP CONSTRAINT IF EXISTS attribution_log_entity_type_check;
+ALTER TABLE attribution_log ADD CONSTRAINT attribution_log_entity_type_check CHECK (entity_type IN (
+  'job_posting', 'application', 'job_contact', 'interview', 'document_asset',
+  'agent_run', 'application_review', 'gate_override'
+));
+
+CREATE OR REPLACE FUNCTION reject_agent_run_event_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'agent_run_events is append-only';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS agent_run_events_append_only ON agent_run_events;
+CREATE TRIGGER agent_run_events_append_only
+  BEFORE UPDATE OR DELETE ON agent_run_events
+  FOR EACH ROW EXECUTE FUNCTION reject_agent_run_event_mutation();
+
 CREATE INDEX IF NOT EXISTS idx_agent_runs_entity ON agent_runs(entity_type, entity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_run_events_run ON agent_run_events(run_id, sequence);
 CREATE INDEX IF NOT EXISTS idx_document_assets_application ON document_assets(application_id, asset_type);

@@ -30,3 +30,13 @@ export function isStaleWrite(expected: string | null | undefined, actual: string
   if (!actual) return true;
   return new Date(expected).getTime() !== new Date(actual).getTime();
 }
+
+export function reviewedAssetsMatch(
+  reviewedHashes: Record<string, string>,
+  currentHashes: Record<string, string>,
+): boolean {
+  const reviewedIds = Object.keys(reviewedHashes);
+  const currentIds = Object.keys(currentHashes);
+  return reviewedIds.length > 0 && reviewedIds.length === currentIds.length &&
+    reviewedIds.every((id) => reviewedHashes[id] === currentHashes[id]);
+}

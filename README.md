@@ -115,7 +115,7 @@ Both the local MCP entrypoint and Supabase Edge Function register the shared
 desktop handlers in `supabase/functions/_shared/`. Existing tool names and
 arguments remain available; desktop-aware responses additionally return a
 versioned `structuredContent` envelope. Apply the migration before deploying
-the function, then verify `get_desktop_capabilities` reports contract `1.0.0`.
+the function, then verify `get_desktop_capabilities` reports contract `1.1.0`.
 
 ### Scheduled Automations (`extension/`)
 
