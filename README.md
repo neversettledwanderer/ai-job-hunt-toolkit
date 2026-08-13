@@ -115,7 +115,17 @@ Both the local MCP entrypoint and Supabase Edge Function register the shared
 desktop handlers in `supabase/functions/_shared/`. Existing tool names and
 arguments remain available; desktop-aware responses additionally return a
 versioned `structuredContent` envelope. Apply the migration before deploying
-the function, then verify `get_desktop_capabilities` reports contract `1.2.0`.
+the function, then deploy it in custom-header authentication mode:
+
+```bash
+supabase functions deploy job-hunt-mcp --no-verify-jwt --project-ref <ref>
+```
+
+This disables the Supabase gateway JWT check for this function because the
+desktop and CLI authenticate with `x-brain-key` instead. It does not make the
+function unauthenticated: the function rejects missing or invalid keys with a
+typed `AUTH_REQUIRED` response. Never put an MCP key in a URL. After deploying,
+verify `get_desktop_capabilities` reports contract `1.2.0`.
 
 ### Scheduled Automations (`extension/`)
 
