@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { buildUpdateApplicationLogs } from "./application-logs.ts";
-import { desktopFailure, desktopSuccess, registerDesktopTools, runWithDesktopCorrelation } from "./desktop-tools.ts";
+import { desktopFailure, desktopSuccess, ensureStructuredToolResult, registerDesktopTools, runWithDesktopCorrelation } from "./desktop-tools.ts";
 import { isStaleWrite, validateApplicationTransition } from "./desktop-domain.ts";
 
 function requireEnv(name: string): string {
@@ -61,8 +61,13 @@ function normalizeUrl(raw: string): string {
 
 const server = new McpServer({
   name: "job-hunt",
-  version: "1.0.0",
+  version: "1.2.0",
 });
+
+const registerToolWithContract = server.registerTool.bind(server);
+server.registerTool = ((name: string, config: Record<string, unknown>, handler: (...args: unknown[]) => unknown) =>
+  registerToolWithContract(name, config as never, async (...args: unknown[]) =>
+    ensureStructuredToolResult(await handler(...args) as Record<string, unknown>) as never)) as typeof server.registerTool;
 
 registerDesktopTools(server, supabase);
 

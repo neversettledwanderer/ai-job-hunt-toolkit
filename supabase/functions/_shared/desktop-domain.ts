@@ -62,3 +62,16 @@ export function selectAttachedPackageAssets(
     : undefined;
   return [resume, coverLetter].filter((asset): asset is PackageAssetReference => Boolean(asset));
 }
+
+export function mapLegacyErrorCode(message: string):
+  | "AUTH_REQUIRED" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"
+  | "GATE_BLOCKED" | "STALE_WRITE" | "DEPENDENCY_UNAVAILABLE" | "INTERNAL" {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("access key") || normalized.includes("unauthorized") || normalized.includes("auth")) return "AUTH_REQUIRED";
+  if (normalized.includes("not found") || normalized.includes("does not exist")) return "NOT_FOUND";
+  if (normalized.includes("already exists") || normalized.includes("duplicate") || normalized.includes("unique")) return "CONFLICT";
+  if (normalized.includes("changed after") || normalized.includes("stale")) return "STALE_WRITE";
+  if (normalized.includes("libreoffice") || normalized.includes("unavailable") || normalized.includes("timed out")) return "DEPENDENCY_UNAVAILABLE";
+  if (normalized.includes("required") || normalized.includes("invalid") || normalized.includes("cannot move")) return "VALIDATION_FAILED";
+  return "INTERNAL";
+}

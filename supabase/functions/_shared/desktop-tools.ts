@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
-import { isStaleWrite, reviewedAssetsMatch, selectAttachedPackageAssets } from "./desktop-domain.ts";
+import { isStaleWrite, mapLegacyErrorCode, reviewedAssetsMatch, selectAttachedPackageAssets } from "./desktop-domain.ts";
 
 export const DESKTOP_CONTRACT_VERSION = "1.2.0";
 
@@ -45,6 +45,26 @@ export function desktopFailure(code: ErrorCode, message: string, retriable = fal
     structuredContent: { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId: error.correlationId, error },
     isError: true,
   };
+}
+
+export function ensureStructuredToolResult(result: Record<string, unknown>) {
+  if (result.structuredContent) return result;
+  const content = Array.isArray(result.content) ? result.content as Array<Record<string, unknown>> : [];
+  const text = String(content.find((item) => item.type === "text")?.text ?? "Operation completed");
+  const correlationId = currentDesktopCorrelationId();
+  if (result.isError) {
+    const error = { code: mapLegacyErrorCode(text), message: text, retriable: false, correlationId };
+    return { ...result, structuredContent: { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId, error } };
+  }
+  let data: Record<string, unknown> = { message: text };
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
+    else data = { value: parsed };
+  } catch {
+    // Preserve the legacy text as structured data when it is intentionally human-readable.
+  }
+  return { ...result, structuredContent: { contractVersion: DESKTOP_CONTRACT_VERSION, correlationId, data } };
 }
 
 export function registerDesktopTools(server: McpServer, supabase: SupabaseClient): void {

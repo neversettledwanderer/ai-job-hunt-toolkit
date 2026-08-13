@@ -1,6 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1";
-import { isStaleWrite, reviewedAssetsMatch, selectAttachedPackageAssets, validateApplicationTransition } from "../../supabase/functions/_shared/desktop-domain.ts";
-import { desktopSuccess, runWithDesktopCorrelation } from "../../supabase/functions/_shared/desktop-tools.ts";
+import { isStaleWrite, mapLegacyErrorCode, reviewedAssetsMatch, selectAttachedPackageAssets, validateApplicationTransition } from "../../supabase/functions/_shared/desktop-domain.ts";
+import { desktopSuccess, ensureStructuredToolResult, runWithDesktopCorrelation } from "../../supabase/functions/_shared/desktop-tools.ts";
 
 Deno.test("validates controlled application transitions", () => {
   assertEquals(validateApplicationTransition("draft", "ready", null), null);
@@ -42,4 +42,14 @@ Deno.test("preserves a request correlation id through asynchronous tool work", a
   });
   assertEquals((result.structuredContent as { correlationId: string }).correlationId, correlationId);
   assertEquals(result.content[0].text.includes('"ok": true'), true);
+});
+
+Deno.test("adds envelopes and typed errors without changing legacy text", () => {
+  const success = ensureStructuredToolResult({ content: [{ type: "text", text: '{"count":2}' }] });
+  assertEquals(success.content, [{ type: "text", text: '{"count":2}' }]);
+  assertEquals((success.structuredContent as { data: unknown }).data, { count: 2 });
+  const failed = ensureStructuredToolResult({ content: [{ type: "text", text: "Application not found" }], isError: true });
+  assertEquals((failed.structuredContent as { error: { code: string } }).error.code, "NOT_FOUND");
+  assertEquals(mapLegacyErrorCode("Duplicate application already exists"), "CONFLICT");
+  assertEquals(mapLegacyErrorCode("LibreOffice is unavailable"), "DEPENDENCY_UNAVAILABLE");
 });
