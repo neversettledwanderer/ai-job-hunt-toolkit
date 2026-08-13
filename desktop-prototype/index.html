@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Interactive frontend prototype for AI Job Hunt Desktop">
+  <title>AI Job Hunt Desktop — Prototype</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+      <a class="brand" href="#overview" data-nav="overview" aria-label="AI Job Hunt overview">
+        <span class="brand-mark">JH</span>
+        <span class="brand-copy"><strong>Job Hunt</strong><small>AI career workspace</small></span>
+      </a>
+      <p class="nav-heading">Workspace</p>
+      <nav id="primary-nav" class="nav-list"></nav>
+      <p class="nav-heading">Library</p>
+      <nav id="secondary-nav" class="nav-list"></nav>
+      <div class="connection-card">
+        <span class="connection-dot"></span>
+        <span><strong>Workspace connected</strong><small>Synced moments ago</small></span>
+      </div>
+      <div class="profile">
+        <span class="profile-avatar">YM</span>
+        <span><strong>Yogesh Mistry</strong><small>Personal workspace</small></span>
+      </div>
+    </aside>
+
+    <section class="app-main">
+      <header class="topbar">
+        <div class="page-heading"><h1 id="page-title">Overview</h1><p id="page-subtitle">Your job search at a glance</p></div>
+        <label class="global-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="global-search" type="search" placeholder="Search roles, companies or contacts" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="topbar-actions">
+          <button class="icon-action" type="button" data-action="notifications" aria-label="Open notifications">♡<span class="notification-dot"></span></button>
+          <button class="primary-action" type="button" data-action="open-add-job">+ Add job</button>
+        </div>
+      </header>
+
+      <main id="page-content" class="page-content" tabindex="-1"></main>
+    </section>
+
+    <div id="drawer-scrim" class="scrim" data-action="close-drawer"></div>
+    <aside id="job-drawer" class="job-drawer" aria-label="Job details" aria-hidden="true"></aside>
+    <aside id="coach-panel" class="coach-panel" aria-label="AI Job Coach" aria-hidden="true"></aside>
+
+    <dialog id="add-job-dialog" class="add-job-dialog">
+      <form id="add-job-form" method="dialog">
+        <header class="dialog-heading">
+          <div><h2>Add a job</h2><p>Save an opportunity without creating an application.</p></div>
+          <button class="close-action" type="button" data-action="close-add-job" aria-label="Close">×</button>
+        </header>
+        <div class="form-grid">
+          <label class="form-field form-wide"><span>Job posting URL</span><input name="url" type="url" placeholder="https://company.com/jobs/role" required></label>
+          <label class="form-field"><span>Company</span><input name="company" placeholder="Company name" required></label>
+          <label class="form-field"><span>Role title</span><input name="title" placeholder="Role title" required></label>
+          <label class="form-field"><span>Location</span><input name="location" placeholder="London · Hybrid"></label>
+          <label class="form-field"><span>Salary</span><input name="salary" placeholder="£90k–£110k"></label>
+          <label class="form-field"><span>Source</span><select name="source"><option>Company site</option><option>LinkedIn</option><option>Indeed</option><option>Adzuna</option><option>Referral</option><option>Other</option></select></label>
+          <label class="form-field"><span>Priority</span><select name="priority"><option value="Untriaged">Untriaged</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select></label>
+          <label class="form-field form-wide"><span>Notes</span><textarea name="notes" rows="3" placeholder="Why this role is interesting"></textarea></label>
+        </div>
+        <footer class="dialog-actions"><button class="secondary-action" type="button" data-action="close-add-job">Cancel</button><button class="primary-action" type="submit">Save job</button></footer>
+      </form>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

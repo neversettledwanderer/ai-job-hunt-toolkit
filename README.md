@@ -179,6 +179,12 @@ Empty-but-structured files for you to fill in with your own content:
 
 Some coaching tools and agents also include `.example.md` files with filled-in samples to show what completed versions look like.
 
+### Desktop App Prototype (`desktop-prototype/`)
+
+An interactive, dependency-free frontend prototype explores how the toolkit could work as a desktop application alongside the existing CLI. It includes the overview, pipeline, jobs, applications, interviews, contacts, documents, activity, settings, job-readiness drawer, simulated add-job flow, and AI Coach panel.
+
+The detailed production requirements, architecture, security model, state machines, delivery plan, and acceptance criteria are documented in [`docs/DESKTOP_APP_PRD.md`](docs/DESKTOP_APP_PRD.md). Run the prototype using the instructions in [`desktop-prototype/README.md`](desktop-prototype/README.md).
+
 ## Quick Start
 
 ### 1. Install
