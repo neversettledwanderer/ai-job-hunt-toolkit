@@ -6,7 +6,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { buildUpdateApplicationLogs } from "./application-logs.ts";
-import { desktopFailure, desktopSuccess, ensureStructuredToolResult, registerDesktopTools, runWithDesktopCorrelation } from "./desktop-tools.ts";
+import { DESKTOP_CONTRACT_VERSION, desktopFailure, desktopSuccess, ensureStructuredToolResult, registerDesktopTools, runWithDesktopCorrelation } from "./desktop-tools.ts";
 import { isStaleWrite, validateApplicationTransition } from "./desktop-domain.ts";
 
 function requireEnv(name: string): string {
@@ -1809,15 +1809,19 @@ server.registerTool(
 const app = new Hono();
 
 app.all("*", async (c) => {
-  const provided = c.req.header("x-brain-key") || new URL(c.req.url).searchParams.get("key");
-  if (!provided || provided !== MCP_ACCESS_KEY) {
-    return c.json({ error: "Invalid or missing access key" }, 401);
-  }
-
   const requestedCorrelationId = c.req.header("x-correlation-id");
   const correlationId = requestedCorrelationId && /^[a-f0-9-]{36}$/i.test(requestedCorrelationId)
     ? requestedCorrelationId
     : crypto.randomUUID();
+  const provided = c.req.header("x-brain-key");
+  if (!provided || provided !== MCP_ACCESS_KEY) {
+    return c.json({
+      contractVersion: DESKTOP_CONTRACT_VERSION,
+      correlationId,
+      error: { code: "AUTH_REQUIRED", message: "Invalid or missing access key", retriable: false, correlationId },
+    }, 401);
+  }
+
   return runWithDesktopCorrelation(correlationId, async () => {
     const transport = new StreamableHTTPTransport();
     await server.connect(transport);
