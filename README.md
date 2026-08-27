@@ -125,7 +125,7 @@ This disables the Supabase gateway JWT check for this function because the
 desktop and CLI authenticate with `x-brain-key` instead. It does not make the
 function unauthenticated: the function rejects missing or invalid keys with a
 typed `AUTH_REQUIRED` response. Never put an MCP key in a URL. After deploying,
-verify `get_desktop_capabilities` reports contract `1.2.0`.
+verify `get_desktop_capabilities` reports contract `1.3.0`.
 
 ### Scheduled Automations (`extension/`)
 

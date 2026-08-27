@@ -4,7 +4,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { z } from "zod";
 import { isStaleWrite, mapLegacyErrorCode, reviewedAssetsMatch, selectAttachedPackageAssets } from "./desktop-domain.ts";
 
-export const DESKTOP_CONTRACT_VERSION = "1.2.0";
+export const DESKTOP_CONTRACT_VERSION = "1.3.0";
 
 type ErrorCode =
   | "AUTH_REQUIRED" | "NOT_FOUND" | "VALIDATION_FAILED" | "CONFLICT"
@@ -194,12 +194,14 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
       inputSchema: {
         run_id: z.string().uuid(), workflow: z.enum(["resume", "review"]),
         entity_type: z.enum(["job_posting", "application", "workspace"]), entity_id: z.string().uuid().nullable().optional(),
+        ai_provider: z.enum(["openai", "anthropic", "google"]).optional(), ai_model: z.string().min(1).max(200).optional(),
       },
     },
-    async ({ run_id, workflow, entity_type, entity_id }) => {
-      const { data, error } = await supabase.from("agent_runs").insert({ id: run_id, workflow, entity_type, entity_id: entity_id ?? null, status: "queued" }).select().single();
+    async ({ run_id, workflow, entity_type, entity_id, ai_provider, ai_model }) => {
+      const { data, error } = await supabase.from("agent_runs").insert({ id: run_id, workflow, entity_type, entity_id: entity_id ?? null, ai_provider: ai_provider ?? null, ai_model: ai_model ?? null, status: "queued" }).select().single();
       if (error) return desktopFailure("INTERNAL", "Agent run could not be created.", true);
-      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "agent_run", entity_id: run_id, action: "created", actor: "desktop-agent", reason: `Started ${workflow}` });
+      const providerSuffix = ai_provider && ai_model ? ` with ${ai_provider}/${ai_model}` : "";
+      const { error: attributionError } = await supabase.from("attribution_log").insert({ entity_type: "agent_run", entity_id: run_id, action: "created", actor: "desktop-agent", reason: `Started ${workflow}${providerSuffix}` });
       return attributionError ? desktopFailure("INTERNAL", "Run created but attribution could not be recorded.", true) : desktopSuccess({ run: data }, "Run created");
     },
   );
@@ -319,7 +321,7 @@ export function registerDesktopTools(server: McpServer, supabase: SupabaseClient
     async ({ limit }) => {
       const [attribution, runs, reviews, overrides] = await Promise.all([
         supabase.from("attribution_log").select("id, entity_type, entity_id, action, actor, reason, created_at").order("created_at", { ascending: false }).limit(limit),
-        supabase.from("agent_runs").select("id, entity_type, entity_id, workflow, status, error_code, error_summary, started_at, finished_at").order("created_at", { ascending: false }).limit(limit),
+        supabase.from("agent_runs").select("id, entity_type, entity_id, workflow, ai_provider, ai_model, status, error_code, error_summary, started_at, finished_at").order("created_at", { ascending: false }).limit(limit),
         supabase.from("application_reviews").select("id, application_id, result, safe_summary, reviewer_run_id, reviewed_at").order("reviewed_at", { ascending: false }).limit(limit),
         supabase.from("gate_overrides").select("id, application_id, gate_ids, reason, actor, created_at").order("created_at", { ascending: false }).limit(limit),
       ]);

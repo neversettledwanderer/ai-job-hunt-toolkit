@@ -61,7 +61,7 @@ function normalizeUrl(raw: string): string {
 
 const server = new McpServer({
   name: "job-hunt",
-  version: "1.2.0",
+  version: "1.3.0",
 });
 
 const registerToolWithContract = server.registerTool.bind(server);
