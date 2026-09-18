@@ -213,7 +213,12 @@ server.registerTool(
       if (priority != null) row.priority = priority;
       if (salary_currency != null) row.salary_currency = salary_currency;
       if (closing_date != null) row.closing_date = closing_date;
-      if (triage_reason != null) row.triage_reason = triage_reason;
+      if (triage_reason != null) {
+        row.triage_reason = triage_reason;
+        // Mirrors the set_triage_rank RPC's triaged_at side effect for the case where a
+        // reason is set at creation without a rank, which never calls that RPC below.
+        row.triaged_at = new Date().toISOString();
+      }
 
       let data;
       if (isNewPosting) {
@@ -1557,7 +1562,12 @@ server.registerTool(
       if (posted_date !== undefined) updateFields.posted_date = posted_date;
       if (closing_date !== undefined) updateFields.closing_date = closing_date;
       if (status !== undefined) updateFields.status = status;
-      if (triage_reason !== undefined && !needsRpc) updateFields.triage_reason = triage_reason;
+      if (triage_reason !== undefined && !needsRpc) {
+        updateFields.triage_reason = triage_reason;
+        // Mirrors the set_triage_rank RPC's triaged_at side effect for the case where
+        // only the reason is changing (no priority/rank), which bypasses that RPC entirely.
+        updateFields.triaged_at = triage_reason === null ? null : new Date().toISOString();
+      }
 
       if (Object.keys(updateFields).length === 0 && !needsRpc) {
         return desktopFailure("VALIDATION_FAILED", "No posting fields were provided to update.");
