@@ -164,8 +164,8 @@ append it to ATS_TIPS.md under the relevant platform section.
 
 ### Step 1: Lookup Job
 - Find the job posting in job-hunt MCP using the URL, company name, or posting ID provided
-- If no application record exists, create one with `submit_application` status `"ready"`
-- If a draft application exists, update status to `"ready"` using `update_application`
+- If no application record exists, ask before creating one with `submit_application` status `"ready"`
+- If a draft application exists, ask before changing its status to `"ready"` using `update_application`
 - Note the job posting URL and the resume_path from the application record
 
 ### Step 2: Networking Gate (MANDATORY — do not skip)
@@ -234,11 +234,12 @@ For each page of the application:
    - If none found, tell the user and offer to create one
 6. Tell the user: "I've filled out this page. Please review the browser and let me know when to continue, or tell me what to fix."
 7. Wait for the user's response. Apply any corrections they request.
-8. Click Next / Continue / Submit
+8. Click Next / Continue. If the control is the final Submit action, stop and ask the user to review and click it themselves.
 9. Run `snapshot` again to detect page transition
 
 ### Step 8: Complete
-- Update application status to `"applied"` with `applied_date` set to today
+- Do not click the final Submit control. Pause with the completed form visible and ask the user to review and submit it themselves.
+- Only after the user confirms submission, ask before updating the application record to `"applied"` with the confirmed `applied_date`.
 - Capture any new learnings about this ATS for future reference
 - Summarize what was done
 
@@ -288,6 +289,9 @@ When calling `submit_application` to create an application, always pass `created
 When calling `update_application`, always pass `actor: "job-applicator"`.
 
 ## Constraints
+
+- Do not click a final Submit control or mark an application as submitted. The user reviews and submits the form, then confirms the outcome.
+- Ask before any pipeline write or deletion. Tool access is not approval.
 
 - NEVER submit an application without user confirmation on the final page
 - NEVER convert a .docx to PDF without asking the user first

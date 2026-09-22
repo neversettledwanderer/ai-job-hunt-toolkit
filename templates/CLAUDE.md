@@ -38,6 +38,15 @@ This project contains your resume and cover letter materials for job application
 - **Never overwrite a job posting's LinkedIn URL** with an ATS board URL (Greenhouse, Lever, Workday, etc.). The original LinkedIn URL is the source of truth. ATS URLs from confirmation emails belong in the notes field.
 - **When merging duplicate postings,** preserve the LinkedIn `/jobs/view/` URL over any other URL format.
 
+## Application Evidence and Approval Gates
+
+- Treat the approved master files and user-confirmed experience as the source of truth. Do not invent or infer achievements, metrics, tools, qualifications, responsibilities, or dates. If evidence is missing, ask or omit the claim.
+- Before drafting application materials, read the full job description and show the user a concise qualification and evidence map. Mark requirements as evidenced, partial, unclear, or missing. Pause on a material mismatch or missing non-negotiable rather than drafting first and rationalising later.
+- Draft only from evidence the user has approved. Keep role-specific claims traceable to a master file or user-confirmed source, and state what changed when tailoring a document.
+- Require user approval of the tailored materials and a separate final review before submission. Never click the final Submit control or mark an application submitted without the user's explicit confirmation.
+- Ask before writing to or deleting pipeline records. Reading pipeline data does not authorise changing it. Do not deploy database or server changes without explicit approval.
+- A role-title or seniority flag is a prompt for full job-description review, not proof of poor fit. Do not infer an ATS or recruiter decision from rejection timing alone; record outcomes as observations unless the screening stage or feedback is known.
+
 ## Agent Instructions
 
 Agent-specific instructions for specialized subagents live in `~/.claude/agents/` and should NOT be duplicated here. Available agents:
@@ -133,4 +142,3 @@ Be careful not to create misleading statements about how long you have done spec
 ## Cover Letter Agent
 
 When asked to create a cover letter, follow the instructions in the cover-letter-optimizer agent (installed at `~/.claude/agents/cover-letter-optimizer.md`). The agent runs a 4-phase pipeline: Briefing, Story Matching, Outline, Draft.
-

@@ -220,11 +220,13 @@ Heading 1 (EDUCATION)
 - If running unattended (spawned by a scheduled task) and WebFetch fails, fail with an error message rather than requesting user input
 - Extract: company name, role title, required qualifications, technical skills, soft skills, keywords, location, job posting URL
 - Extract salary information if present in the job description (salary range, compensation, pay band). Parse into min/max numbers and currency.
+- Before tailoring, present a compact qualification and evidence map. Mark each material requirement as evidenced, partial, unclear, or missing, citing the relevant master-file evidence. Pause if a non-negotiable is missing or a material mismatch needs the user's judgement.
+- Draft only from approved master-file or user-confirmed evidence. Do not create or strengthen metrics, responsibilities, tools, qualifications, or outcomes without a source.
 - **Pipeline sync**: Use the `job-hunt` MCP tools to track this job in the pipeline:
-  - **If a posting ID was provided in the prompt**: use that ID directly. Do NOT re-lookup or create a new posting. If salary was extracted from the job description, call `add_job_posting` with the EXACT original URL to upsert salary fields.
-  - **If no posting ID was provided** (manual/interactive run): Call `search_job_postings` with the URL first, then by company name. If found, note the existing posting ID. If NOT found, call `add_job_posting` with the URL, company name, title, location, source, and salary info.
+  - **If a posting ID was provided in the prompt**: use that ID directly. Do NOT re-lookup or create a new posting. If salary was extracted from the job description, propose an `add_job_posting` upsert using the EXACT original URL and ask before writing it.
+  - **If no posting ID was provided** (manual/interactive run): Call `search_job_postings` with the URL first, then by company name. If found, note the existing posting ID. If NOT found, propose an `add_job_posting` record with the URL, company name, title, location, source, and salary info, and ask before writing it.
   - **NEVER fabricate or guess a URL.** If you do not have a URL, omit it. Do not invent LinkedIn job view numbers.
-  - This ensures every resume you build is tracked in the job pipeline
+- Never create or modify a pipeline record without the user's explicit approval for that write.
 
 ### Step 2: Load Master Content & Select Base Resume
 - Read MASTER_BULLETS, MASTER_SKILLS, and MASTER_PROFILES to load all available content
@@ -238,6 +240,7 @@ Heading 1 (EDUCATION)
 - Plan how to tailor bullet wording to emphasize relevant skills/outcomes
 - Select or craft 15 skills (max 30 chars each) using MASTER_SKILLS as baseline
 - Plan Profile angle using MASTER_PROFILES as inspiration, blending themes as needed
+- Show the user the tailoring brief and get approval before creating the document
 
 ### Step 4: Create New Resume
 1. Create company subfolder if needed: `mkdir -p "RESUME_FOLDER/CompanyName"`
@@ -252,13 +255,14 @@ Heading 1 (EDUCATION)
 
 ### Step 6: Deliver
 - Summarize key changes made
+- Include a short change log linking material changes to job requirements and verified evidence
 - **Pipeline sync**: Update the job pipeline with the resume path:
   - Use the posting ID noted in Step 1. If a posting ID was provided in the original prompt, use that exact ID.
-  - If no application exists yet for this posting, call `submit_application` with:
+  - Ask the user before any pipeline write. If approved and no application exists yet for this posting, call `submit_application` with:
     - `job_posting_id`: the posting ID from Step 1
     - `status: "draft"` (NEVER "applied" -- the user decides when to actually apply)
     - `resume_path`: the tilde-notation path to the saved .docx file
-  - If an application already exists, call `update_application` with `resume_path` set to the .docx path
+  - If an application already exists, and the user approves the write, call `update_application` with `resume_path` set to the .docx path
 
 ## Attribution
 

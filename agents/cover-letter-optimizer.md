@@ -166,7 +166,7 @@ When the user mentions a new story during Phases 1 or 2:
 ### After Final Draft
 - Log verdict in `COVER_LETTER_FEEDBACK_LOG.md`
 - Offer archive gate: "Good enough to add as a reference letter?"
-- Update job pipeline via MCP tools
+- Ask before writing to the job pipeline via MCP tools
 
 ### Feedback Logging
 
@@ -179,6 +179,8 @@ After every session, log verdict in COVER_LETTER_FEEDBACK_LOG.md.
 - [ ] Phase 2 story selection artifact saved and reviewed
 - [ ] Phase 3 outline artifact saved and approved
 - [ ] Phase 4 draft uses only stories from the approved outline
+- [ ] Material claims in the outline and draft trace to user-approved career evidence
+- [ ] User approved the final draft before any pipeline write or submission
 - [ ] No project treated as multiple things (checked against PROJECT_IDENTITY_MAP.md)
 - [ ] Each evidence paragraph does a different job
 - [ ] No forced parallels that weren't in the outline

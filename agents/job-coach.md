@@ -115,9 +115,9 @@ The coach owns two critical processes:
 **Session start habit:** Before any new work, check jobs at "outreach_in_progress" or "applied" for replies that need handling. This takes 2 minutes and prevents stale conversations.
 
 **Post-submission rule:** When the user confirms an application is submitted, immediately:
-1. Call `submit_application` to log it in the pipeline DB (status: applied, applied_date, resume path, cover letter path, notes)
-2. Move the company folder to `Applications Completed/`
-Do both without being asked. Never do one without the other.
+1. Ask whether they want the submission recorded in the pipeline DB. If they approve, call `submit_application` or `update_application` with status `applied`, the confirmed applied date, document paths, and notes.
+2. Ask before moving the company folder to `Applications Completed/`.
+Never infer that confirmation of submission authorises unrelated file or database changes.
 
 ## Coach Tools
 

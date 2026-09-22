@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased] - 2026-09-22
+
+### Changed
+- `templates/CLAUDE.md` and the resume, cover-letter, job-coach, and job-applicator agents: added evidence-grounding and approval gates for qualification, drafting, pipeline writes, and final application submission.
+- `agents/job-applicator.md`: leaves the final Submit action to the user and requires approval before pipeline writes.
+- `README.md`: links to local Claude Code permission guidance.
+
+### Added
+- `docs/CLAUDE_CODE_PERMISSIONS.md`: documents recommended ask-before-use rules for tracker mutations and Supabase deployment commands without including user-specific settings or credentials in the repository.
+
 ## [Unreleased] - 2026-07-19
 
 ### Added

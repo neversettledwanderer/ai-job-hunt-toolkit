@@ -220,6 +220,8 @@ https://github.com/neversettledwanderer/ai-job-hunt-toolkit
 
 Tell Claude: "Clone this repo and set it up for me as a job hunting toolkit. Copy agents/ to ~/.claude/agents/, skills/ to ~/.claude/skills/, and create a new project folder at ~/job-hunt/ with the contents of templates/ and coach-tools/, plus .job-discovery-config.example.yaml from the repo root."
 
+Review [`docs/CLAUDE_CODE_PERMISSIONS.md`](docs/CLAUDE_CODE_PERMISSIONS.md) and configure the recommended write and deployment operations to ask in your local Claude Code settings. Do not commit personal settings or credentials to this repository.
+
 Claude Code loads agents and skills dynamically, so no restart is needed.
 
 ### 2. First Run
