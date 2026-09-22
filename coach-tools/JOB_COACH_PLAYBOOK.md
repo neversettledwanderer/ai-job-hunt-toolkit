@@ -84,6 +84,7 @@ Comp, level, scope, equity. How to create leverage. What to negotiate beyond sal
 | `energy-mapping.md` | Track energizing vs. draining activities | When feeling burned out |
 | `competitive-positioning.md` | Research competitor positioning | When positioning isn't getting traction |
 | `role-landscape.md` | Target role types, expectations, vocabulary | For role-specific positioning |
+| `target-companies-and-people.md` | Research evidence-based target employers and practitioners to follow | When exploring companies beyond current vacancies, or deciding whose public work to follow |
 | `career-transition.md` | Ibarra strategies, Bridge Pivot | When discussing non-standard background |
 | `execution-workflow.md` | Job execution state machine | When determining "what's next?" |
 | `triage-rubric.md` | Personal prioritization rubric builder | First session (required), or when priorities shift |

@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-09-22
 
+### Added
+- `coach-tools/target-companies-and-people.md` and `templates/TARGET_COMPANIES_AND_PEOPLE.md`: evidence-backed target-company and people-to-follow research, distinguishing verified vacancies from watchlist companies and passive learning from contact intent.
+
 ### Changed
 - `templates/CLAUDE.md` and the resume, cover-letter, job-coach, and job-applicator agents: added evidence-grounding and approval gates for qualification, drafting, pipeline writes, and final application submission.
 - `agents/job-applicator.md`: leaves the final Submit action to the user and requires approval before pipeline writes.

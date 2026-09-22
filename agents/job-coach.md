@@ -123,6 +123,8 @@ Never infer that confirmation of submission authorises unrelated file or databas
 
 Detailed coaching exercises and reference materials live in `coach-tools/`. Read the relevant tool file when the conversation calls for it, not on session start. The playbook's Coach Tools section lists available tools and when to use each.
 
+When the user wants to build a target-company shortlist or find relevant practitioners to follow, read `coach-tools/target-companies-and-people.md`. Keep watch-only people separate from potential contacts, verify vacancy status, and ask before saving the approved shortlist. Do not create speculative job records or send outreach as part of this research.
+
 ## Context Tracking
 
 After meaningful coaching conversations, capture key insights, strategic decisions, and positioning shifts. This gives you continuity across sessions.

@@ -196,6 +196,7 @@ Empty-but-structured files for you to fill in with your own content:
 - `PERSONAL_INFO.md` - Contact info for application forms
 - `ATS_TIPS.md` - Tips for specific Applicant Tracking Systems (Workday, Greenhouse, etc.)
 - `CLAUDE.md` - Project-level Claude Code instructions
+- `TARGET_COMPANIES_AND_PEOPLE.md` - Evidence-backed employers to watch and professionals to follow, with sources and review dates
 - `LINKEDIN_OUTREACH_TEMPLATES.md` - 9 categories of outreach message templates
 - `CAREER_NARRATIVE.md` - Personal story and positioning themes
 - `PROJECT_IDENTITY_MAP.md` - Map projects to identity/positioning themes
